@@ -1,0 +1,11 @@
+{
+  "default": {
+    "broker_net_volume": 500,
+    "etf_rebalance_pct": 10.0
+  },
+  "overrides": {
+    "0050": {
+      "etf_rebalance_pct": 10.0
+    }
+  }
+}
