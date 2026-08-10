@@ -1,0 +1,29 @@
+{
+  "default": {
+    "broker_net_volume": 500,
+    "institutional_net_volume": 500,
+    "etf_rebalance_pct": 10.0
+  },
+  "institutional_tiered": {
+    "volume_ratio_pct": 15.0,
+    "market_cap_tiers": {
+      "large_min": 100000000000,
+      "mid_min": 10000000000
+    },
+    "amount_thresholds": {
+      "large": 3000000000,
+      "mid": 500000000,
+      "small": 100000000
+    }
+  },
+  "market_institutional": {
+    "foreign_amount": 20000000000,
+    "trust_amount": 3000000000,
+    "dealer_amount": 5000000000
+  },
+  "overrides": {
+    "0050": {
+      "etf_rebalance_pct": 10.0
+    }
+  }
+}

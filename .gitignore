@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+
+# 本機密鑰，正式環境改用 GitHub Repository Secrets 注入
+.env
+
+# 編輯器
+.vscode/
+.idea/
