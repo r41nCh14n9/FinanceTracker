@@ -1,5 +1,6 @@
 """將分析結果格式化為簡報文字，並透過 LINE Messaging API 推播給設定檔中的收訊名單。
 
+簡報分三個區塊：大盤三大法人動態、個股三大法人買賣超（含觸發原因標示）、ETF 換倉動態。
 推播失敗會重試幾次，仍失敗就放棄並記錄下來，不無限重試以免觸發 LINE 的頻率限流。
 """
 from __future__ import annotations
@@ -11,7 +12,15 @@ from datetime import datetime, timezone
 import requests
 
 from src.config import ConfigLoader
-from src.models import NotificationLogEntry, RebalanceEvent, RebalanceEventType, SendStatus
+from src.models import (
+    AlertTriggerType,
+    InstitutionalAlert,
+    MarketCapTier,
+    NotificationLogEntry,
+    RebalanceEvent,
+    RebalanceEventType,
+    SendStatus,
+)
 from src.storage import SnapshotRepository
 
 logger = logging.getLogger(__name__)
@@ -19,18 +28,44 @@ logger = logging.getLogger(__name__)
 _MAX_ATTEMPTS = 3
 _RETRY_BACKOFF_SECONDS = (5, 15, 30)
 
+_SHARES_PER_LOT = 1000  # 股 -> 張
+
+_MARKET_LABELS = {
+    AlertTriggerType.MARKET_FOREIGN: "外資",
+    AlertTriggerType.MARKET_TRUST: "投信",
+    AlertTriggerType.MARKET_DEALER: "自營商",
+}
+
+_STOCK_TRIGGER_LABELS = {
+    AlertTriggerType.VOLUME_RATIO: "量能異常",
+    AlertTriggerType.TIERED_AMOUNT: "大額進出",
+    AlertTriggerType.VOLUME_AND_AMOUNT: "量能異常＋大額進出",
+}
+
+_TIER_LABELS = {
+    MarketCapTier.LARGE: "大型",
+    MarketCapTier.MID: "中型",
+    MarketCapTier.SMALL: "中小型",
+}
+
 
 class MessageFormatter:
     def format(
         self,
         report_date: str,
-        significant_trades: list[dict],
+        market_alerts: list[InstitutionalAlert],
+        stock_alerts: list[InstitutionalAlert],
+        institutional_trades: list[dict],
         rebalance_events: list[RebalanceEvent],
-        threshold: int,
     ) -> str:
         lines = [f"【籌碼監控日報】{report_date}", ""]
-        lines.append(f"◆ 主力分點顯著買賣超（門檻 {threshold} 張）")
-        lines.extend(self._format_trades(significant_trades))
+
+        lines.append("◆ 大盤三大法人動態")
+        lines.extend(self._format_market_alerts(market_alerts))
+        lines.append("")
+
+        lines.append("◆ 三大法人買賣超（個股）")
+        lines.extend(self._format_stock_alerts(stock_alerts, institutional_trades))
         lines.append("")
 
         for etf_id, events in self._group_by_etf(rebalance_events).items():
@@ -38,17 +73,50 @@ class MessageFormatter:
             lines.extend(self._format_events(events))
             lines.append("")
 
-        lines.append("（本訊息由籌碼監控引擎自動產生）")
+        lines.append("（本訊息由籌碼監控引擎自動產生，個股金額為估算值）")
         return "\n".join(lines)
 
     @staticmethod
-    def _format_trades(trades: list[dict]) -> list[str]:
-        if not trades:
-            return ["  （無達門檻標的）"]
+    def _format_market_alerts(alerts: list[InstitutionalAlert]) -> list[str]:
+        if not alerts:
+            return ["  （今日大盤三大法人買賣金額均未達門檻）"]
         lines = []
-        for t in trades:
-            direction = "買超" if t["net_volume"] > 0 else "賣超"
-            lines.append(f"  {t['stock_id']} {t['stock_name']}  {t['broker_name']}  {direction} {abs(t['net_volume']):,} 張")
+        for alert in alerts:
+            label = _MARKET_LABELS[alert.trigger_type]
+            direction = "買超" if alert.estimated_amount > 0 else "賣超"
+            amount_yi = abs(alert.estimated_amount) / 1e8
+            lines.append(f"  {label}單日{direction} {amount_yi:,.1f} 億元")
+        return lines
+
+    def _format_stock_alerts(self, alerts: list[InstitutionalAlert], institutional_trades: list[dict]) -> list[str]:
+        if not alerts:
+            return ["  （無達門檻標的）"]
+        trades_by_stock = {t["stock_id"]: t for t in institutional_trades}
+        lines = []
+        for alert in alerts:
+            trade = trades_by_stock.get(alert.stock_id)
+            if trade is None:
+                continue
+            label = _STOCK_TRIGGER_LABELS[alert.trigger_type]
+            lines.append(f"  {trade['stock_id']} {trade['stock_name']} [{label}]")
+            lines.extend(self._format_institutional_detail(trade, alert))
+        return lines
+
+    @staticmethod
+    def _format_institutional_detail(trade: dict, alert: InstitutionalAlert) -> list[str]:
+        foreign_net = (trade["foreign_investor_buy"] - trade["foreign_investor_sell"]) + trade["foreign_dealer_self_net"]
+        trust_net = trade["investment_trust_buy"] - trade["investment_trust_sell"]
+        dealer_net = trade["dealer_self_net"] + trade["dealer_hedging_net"]
+        lines = [
+            f"    外資 {foreign_net / _SHARES_PER_LOT:+,.0f} 張／"
+            f"投信 {trust_net / _SHARES_PER_LOT:+,.0f} 張／"
+            f"自營商 {dealer_net / _SHARES_PER_LOT:+,.0f} 張"
+        ]
+        if alert.estimated_amount is not None:
+            direction = "買超" if alert.estimated_amount > 0 else "賣超"
+            amount_yi = abs(alert.estimated_amount) / 1e8
+            tier_label = _TIER_LABELS.get(alert.market_cap_tier, "未知")
+            lines.append(f"    估算金額：{direction} {amount_yi:,.1f} 億元（市值分級：{tier_label}）")
         return lines
 
     @staticmethod
@@ -99,9 +167,17 @@ class Notifier:
         self._formatter = MessageFormatter()
         self._line_client = line_client or LineClient(config.get_env("LINE_CHANNEL_ACCESS_TOKEN"))
 
-    def notify(self, report_date: str, significant_trades: list[dict], rebalance_events: list[RebalanceEvent]) -> bool:
-        threshold = self._config.get_broker_net_volume_threshold()
-        message = self._formatter.format(report_date, significant_trades, rebalance_events, threshold)
+    def notify(
+        self,
+        report_date: str,
+        market_alerts: list[InstitutionalAlert],
+        stock_alerts: list[InstitutionalAlert],
+        institutional_trades: list[dict],
+        rebalance_events: list[RebalanceEvent],
+    ) -> bool:
+        message = self._formatter.format(
+            report_date, market_alerts, stock_alerts, institutional_trades, rebalance_events
+        )
 
         all_succeeded = True
         for recipient in self._config.get_enabled_recipients():

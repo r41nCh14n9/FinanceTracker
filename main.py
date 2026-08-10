@@ -11,12 +11,26 @@ import logging
 import sys
 from datetime import date
 
-from src.analyzer import BrokerFilter, RebalanceClassifier
+from src.analyzer import InstitutionalTieredFilter, MarketInstitutionalFilter, RebalanceClassifier
 from src.config import ConfigError, ConfigLoader
 from src.fetcher import Fetcher
 from src.notifier import MessageFormatter, Notifier
 from src.storage import SnapshotRepository
 
+
+def _ensure_utf8_output() -> None:
+    """有些主控台（尤其 Windows 中文系統）預設輸出編碼不是 UTF-8，直接印中文簡報
+    不只會顯示亂碼，重導向到檔案時內容還會真的被寫壞；這裡強制改用 UTF-8 輸出，
+    不支援 reconfigure 的環境（例如測試框架接管過 stdout）就靜靜跳過。
+    """
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8")
+        except (AttributeError, ValueError):
+            pass
+
+
+_ensure_utf8_output()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
@@ -38,18 +52,38 @@ def run(target_date: str, dry_run: bool = False) -> bool:
     storage = SnapshotRepository()
     Fetcher(config, storage).fetch_all(target_date)
 
-    trades = storage.read_broker_trades(target_date)
-    significant_trades = BrokerFilter(config).filter_significant_trades(trades)
+    market_alerts, stock_alerts, institutional_trades = _evaluate_institutional_alerts(config, storage, target_date)
+    storage.write_institutional_alerts(target_date, market_alerts + stock_alerts)
+
     rebalance_events = _classify_rebalance_events(config, storage, target_date)
     storage.write_rebalance_events(target_date, rebalance_events)
 
     if dry_run:
-        threshold = config.get_broker_net_volume_threshold()
-        message = MessageFormatter().format(target_date, significant_trades, rebalance_events, threshold)
+        message = MessageFormatter().format(
+            target_date, market_alerts, stock_alerts, institutional_trades, rebalance_events
+        )
         print(message)
         return True
 
-    return Notifier(config, storage).notify(target_date, significant_trades, rebalance_events)
+    return Notifier(config, storage).notify(
+        target_date, market_alerts, stock_alerts, institutional_trades, rebalance_events
+    )
+
+
+def _evaluate_institutional_alerts(
+    config: ConfigLoader, storage: SnapshotRepository, target_date: str
+) -> tuple[list, list, list[dict]]:
+    institutional_trades = storage.read_institutional_trades(target_date)
+    stock_trading = storage.read_stock_trading(target_date)
+    stock_alerts = InstitutionalTieredFilter(config, storage).filter_significant_trades(
+        institutional_trades, stock_trading
+    )
+
+    market_record = storage.read_market_institutional(target_date)
+    market_alerts = (
+        MarketInstitutionalFilter(config).filter_significant_trades(market_record) if market_record else []
+    )
+    return market_alerts, stock_alerts, institutional_trades
 
 
 def _classify_rebalance_events(config: ConfigLoader, storage: SnapshotRepository, target_date: str) -> list:

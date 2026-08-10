@@ -3,6 +3,10 @@
 上層模組（fetcher / analyzer / notifier）不需要知道實際存放路徑或檔案格式，
 只透過這裡提供的方法存取資料；「前一交易日」的查找邏輯也封裝在這裡，
 靠掃描既有快照目錄找最近一筆有效交易日，不需要另外維護交易日曆。
+
+股本快取（capital_stock）比較特別，是按股票代碼存放、不分日期的單一檔案，
+放在 data/reference/ 下面而不是 data/snapshots/{date}/ 底下，因為股本是季更新資料，
+放進每天的快照只會讓幾乎一樣的內容重複存好幾百份。
 """
 from __future__ import annotations
 
@@ -16,8 +20,13 @@ from src.models import (
     BrokerTradeRecord,
     DailySnapshotMeta,
     EtfHoldingRecord,
+    InstitutionalAlert,
+    InstitutionalTradeRecord,
+    MarketInstitutionalRecord,
     NotificationLogEntry,
     RebalanceEvent,
+    StockCapitalSnapshot,
+    StockDailyTrading,
 )
 
 
@@ -33,6 +42,7 @@ class SnapshotRepository:
         self._data_dir = Path(data_dir)
         self._snapshots_dir = self._data_dir / "snapshots"
         self._reports_dir = self._data_dir / "reports"
+        self._reference_dir = self._data_dir / "reference"
 
     # --- 路徑 helpers ---
     def _snapshot_dir(self, snapshot_date: str) -> Path:
@@ -40,6 +50,9 @@ class SnapshotRepository:
 
     def _report_dir(self, report_date: str) -> Path:
         return self._reports_dir / report_date
+
+    def _capital_stock_cache_path(self, stock_id: str) -> Path:
+        return self._reference_dir / "capital_stock" / f"{stock_id}.json"
 
     @staticmethod
     def _write_json(path: Path, payload: Any) -> None:
@@ -61,13 +74,43 @@ class SnapshotRepository:
     def read_meta(self, snapshot_date: str) -> dict | None:
         return self._read_json(self._snapshot_dir(snapshot_date) / "_meta.json")
 
-    # --- BROKER_TRADE_RECORD ---
+    # --- BROKER_TRADE_RECORD（保留，分點功能停用期間不會有新資料寫入） ---
     def write_broker_trades(self, snapshot_date: str, records: list[BrokerTradeRecord]) -> None:
         payload = [dataclasses.asdict(r) for r in records]
         self._write_json(self._snapshot_dir(snapshot_date) / "broker_trades.json", payload)
 
     def read_broker_trades(self, snapshot_date: str) -> list[dict]:
         return self._read_json(self._snapshot_dir(snapshot_date) / "broker_trades.json") or []
+
+    # --- INSTITUTIONAL_TRADE_RECORD（個股三大法人買賣超原始資料） ---
+    def write_institutional_trades(self, snapshot_date: str, records: list[InstitutionalTradeRecord]) -> None:
+        payload = [dataclasses.asdict(r) for r in records]
+        self._write_json(self._snapshot_dir(snapshot_date) / "institutional_trades.json", payload)
+
+    def read_institutional_trades(self, snapshot_date: str) -> list[dict]:
+        return self._read_json(self._snapshot_dir(snapshot_date) / "institutional_trades.json") or []
+
+    # --- STOCK_DAILY_TRADING（個股成交量/收盤價） ---
+    def write_stock_trading(self, snapshot_date: str, records: list[StockDailyTrading]) -> None:
+        payload = [dataclasses.asdict(r) for r in records]
+        self._write_json(self._snapshot_dir(snapshot_date) / "stock_trading.json", payload)
+
+    def read_stock_trading(self, snapshot_date: str) -> list[dict]:
+        return self._read_json(self._snapshot_dir(snapshot_date) / "stock_trading.json") or []
+
+    # --- STOCK_CAPITAL_SNAPSHOT（股本快取，獨立於日期快照之外，單檔覆寫） ---
+    def read_capital_stock_cache(self, stock_id: str) -> dict | None:
+        return self._read_json(self._capital_stock_cache_path(stock_id))
+
+    def write_capital_stock_cache(self, snapshot: StockCapitalSnapshot) -> None:
+        self._write_json(self._capital_stock_cache_path(snapshot.stock_id), dataclasses.asdict(snapshot))
+
+    # --- MARKET_INSTITUTIONAL_RECORD（大盤三大法人買賣金額，每天僅一筆） ---
+    def write_market_institutional(self, snapshot_date: str, record: MarketInstitutionalRecord) -> None:
+        self._write_json(self._snapshot_dir(snapshot_date) / "market_institutional.json", dataclasses.asdict(record))
+
+    def read_market_institutional(self, snapshot_date: str) -> dict | None:
+        return self._read_json(self._snapshot_dir(snapshot_date) / "market_institutional.json")
 
     # --- ETF_HOLDING_RECORD（每檔 ETF 各自一個檔案，比對時只需載入單一 ETF） ---
     def write_etf_holdings(self, snapshot_date: str, etf_id: str, records: list[EtfHoldingRecord]) -> None:
@@ -83,6 +126,11 @@ class SnapshotRepository:
     def write_rebalance_events(self, report_date: str, events: list[RebalanceEvent]) -> None:
         payload = [dataclasses.asdict(e) for e in events]
         self._write_json(self._report_dir(report_date) / "rebalance_events.json", payload)
+
+    # --- INSTITUTIONAL_ALERT（門檻判斷結果，只存達標項目） ---
+    def write_institutional_alerts(self, report_date: str, alerts: list[InstitutionalAlert]) -> None:
+        payload = [dataclasses.asdict(a) for a in alerts]
+        self._write_json(self._report_dir(report_date) / "institutional_alerts.json", payload)
 
     # --- NOTIFICATION_LOG（同一天可能有多位收訊者，逐筆附加） ---
     def append_notification_log(self, report_date: str, entry: NotificationLogEntry) -> None:

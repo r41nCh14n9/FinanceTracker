@@ -1,10 +1,10 @@
 {
   "recipients": [
     {
-      "id": "Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "id": "U48efa857368492521a6bb2aa584830f6",
       "type": "USER",
-      "label": "範例收訊者，請替換為實際 LINE User/Group ID",
-      "enabled": false
+      "label": "Roy 本人",
+      "enabled": true
     }
   ]
 }
