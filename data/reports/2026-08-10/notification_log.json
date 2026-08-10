@@ -6,5 +6,13 @@
     "send_status": "SUCCESS",
     "retry_count": 0,
     "error_message": null
+  },
+  {
+    "sent_at": "2026-08-10T10:53:31.104149+00:00",
+    "recipient_id": "U48efa857368492521a6bb2aa584830f6",
+    "message_content": "【籌碼監控日報】2026-08-10\n\n◆ 大盤三大法人動態\n  外資單日買超 517.1 億元\n  自營商單日買超 184.7 億元\n\n◆ 三大法人買賣超（個股）\n  2454 聯發科 [量能異常＋大額進出]\n    外資 +1,391 張／投信 -63 張／自營商 +92 張\n    估算金額：買超 56.2 億元（市值分級：大型）\n\n（本訊息由籌碼監控引擎自動產生，個股金額為估算值）",
+    "send_status": "SUCCESS",
+    "retry_count": 0,
+    "error_message": null
   }
 ]
