@@ -1,0 +1,18 @@
+[
+  {
+    "scope": "MARKET",
+    "trigger_type": "MARKET_DEALER",
+    "stock_id": null,
+    "estimated_amount": 8700668735,
+    "market_cap_tier": null,
+    "volume_ratio_pct": null
+  },
+  {
+    "scope": "STOCK",
+    "trigger_type": "VOLUME_AND_AMOUNT",
+    "stock_id": "2330",
+    "estimated_amount": 7060665465,
+    "market_cap_tier": "LARGE",
+    "volume_ratio_pct": 15.033155076474358
+  }
+]
