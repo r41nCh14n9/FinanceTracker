@@ -3,17 +3,19 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 
-from src.fetcher import Fetcher, FinMindClient, TwsePcfClient
+from src.fetcher import Fetcher, FinMindClient
+from src.issuer_pcf.base import IssuerPcfProvider
 from src.models import DataSourceKey, SnapshotStatus, StockCapitalSnapshot
 from src.storage import SnapshotRepository
 
 
 class _FakeConfig:
-    def __init__(self, stocks=None, brokers=None, etfs=None, broker_enabled=False):
+    def __init__(self, stocks=None, brokers=None, etfs=None, broker_enabled=False, issuer_mappings=None):
         self._stocks = stocks or ["2330", "2454"]
         self._brokers = brokers or []
         self._etfs = etfs or ["0050"]
         self._broker_enabled = broker_enabled
+        self._issuer_mappings = issuer_mappings or {}
 
     def get_watchlist_stocks(self):
         return list(self._stocks)
@@ -26,6 +28,9 @@ class _FakeConfig:
 
     def is_broker_monitoring_enabled(self):
         return self._broker_enabled
+
+    def get_issuer_mapping(self, etf_id):
+        return self._issuer_mappings[etf_id]
 
     @staticmethod
     def get_env(key, required=True):
@@ -47,16 +52,20 @@ def _quiet_finmind():
     return finmind
 
 
-def _quiet_twse():
-    twse = MagicMock(spec=TwsePcfClient)
-    twse.fetch_holdings.return_value = []
-    return twse
+def _quiet_issuer_providers(etf_ids=("0050",)):
+    """回傳一個依 ETF 代碼索引的假 provider 對照表，每個都回應「今天沒有資料」。"""
+    providers = {}
+    for etf_id in etf_ids:
+        provider = MagicMock(spec=IssuerPcfProvider)
+        provider.fetch_holdings.return_value = []
+        providers[etf_id] = provider
+    return providers
 
 
 def test_fetch_all_skips_broker_source_when_disabled(tmp_path):
     storage = _make_repo(tmp_path)
     finmind = _quiet_finmind()
-    fetcher = Fetcher(_FakeConfig(broker_enabled=False), storage, finmind_client=finmind, twse_client=_quiet_twse())
+    fetcher = Fetcher(_FakeConfig(broker_enabled=False), storage, finmind_client=finmind, issuer_providers=_quiet_issuer_providers())
 
     meta = fetcher.fetch_all("2026-08-05")
 
@@ -67,7 +76,7 @@ def test_fetch_all_skips_broker_source_when_disabled(tmp_path):
 def test_fetch_all_includes_broker_source_when_enabled(tmp_path):
     storage = _make_repo(tmp_path)
     finmind = _quiet_finmind()
-    fetcher = Fetcher(_FakeConfig(broker_enabled=True), storage, finmind_client=finmind, twse_client=_quiet_twse())
+    fetcher = Fetcher(_FakeConfig(broker_enabled=True), storage, finmind_client=finmind, issuer_providers=_quiet_issuer_providers())
 
     meta = fetcher.fetch_all("2026-08-05")
 
@@ -83,7 +92,7 @@ def test_is_trading_day_ignores_capital_stock_cache_hit(tmp_path):
         StockCapitalSnapshot("2330", "2026-03-31", 100, 10, "2026-08-05T00:00:00+00:00")
     )
     finmind = _quiet_finmind()
-    fetcher = Fetcher(_FakeConfig(stocks=["2330"]), storage, finmind_client=finmind, twse_client=_quiet_twse())
+    fetcher = Fetcher(_FakeConfig(stocks=["2330"]), storage, finmind_client=finmind, issuer_providers=_quiet_issuer_providers())
 
     meta = fetcher.fetch_all("2026-08-08")
 
@@ -101,7 +110,7 @@ def test_is_trading_day_true_when_institutional_data_present(tmp_path):
         "investment_trust_buy": 0, "investment_trust_sell": 0,
         "dealer_self_net": 0, "dealer_hedging_net": 0, "total_net": 1,
     }]
-    fetcher = Fetcher(_FakeConfig(stocks=["2330"]), storage, finmind_client=finmind, twse_client=_quiet_twse())
+    fetcher = Fetcher(_FakeConfig(stocks=["2330"]), storage, finmind_client=finmind, issuer_providers=_quiet_issuer_providers())
 
     meta = fetcher.fetch_all("2026-08-05")
 
@@ -114,7 +123,7 @@ def test_capital_stock_cache_malformed_content_treated_as_stale_not_crash(tmp_pa
     # 重點是 fetch_all() 不能被這個壞檔案炸掉，而是把它當「過期」重新抓一次。
     storage._write_json(storage._capital_stock_cache_path("2330"), {"stock_id": "2330"})
     finmind = _quiet_finmind()
-    fetcher = Fetcher(_FakeConfig(stocks=["2330"]), storage, finmind_client=finmind, twse_client=_quiet_twse())
+    fetcher = Fetcher(_FakeConfig(stocks=["2330"]), storage, finmind_client=finmind, issuer_providers=_quiet_issuer_providers())
 
     meta = fetcher.fetch_all("2026-08-05")  # 不應該拋例外
 
@@ -181,6 +190,38 @@ def test_fetch_broker_trades_single_stock_failure_keeps_other_stocks_data():
         result = client.fetch_broker_trades("2026-08-05", ["2330", "9999", "2454"], ["凱基-台北"])
 
     assert {r["stock_id"] for r in result} == {"2330", "2454"}
+
+
+def test_fetch_etf_holdings_resolves_provider_from_registry_when_not_overridden(tmp_path):
+    storage = _make_repo(tmp_path)
+    finmind = _quiet_finmind()
+    fake_adapter_cls = MagicMock()
+    fake_adapter_instance = fake_adapter_cls.return_value
+    fake_adapter_instance.fetch_holdings.return_value = [
+        {"component_stock_id": "2330", "component_name": "台積電", "holding_shares": 100}
+    ]
+
+    config = _FakeConfig(issuer_mappings={"0050": {"adapter": "FakeAdapter"}})
+    fetcher = Fetcher(config, storage, finmind_client=finmind)
+
+    with patch.dict("src.fetcher.ADAPTER_REGISTRY", {"FakeAdapter": fake_adapter_cls}, clear=True):
+        meta = fetcher.fetch_all("2026-08-05")
+
+    assert meta.sources[DataSourceKey.ISSUER_PCF].status == SnapshotStatus.OK
+    fake_adapter_instance.fetch_holdings.assert_called_once_with("0050", "2026-08-05")
+
+
+def test_fetch_etf_holdings_unknown_adapter_reports_error_without_crashing(tmp_path):
+    storage = _make_repo(tmp_path)
+    finmind = _quiet_finmind()
+    config = _FakeConfig(issuer_mappings={"0050": {"adapter": "NotRegisteredAdapter"}})
+    fetcher = Fetcher(config, storage, finmind_client=finmind)
+
+    with patch.dict("src.fetcher.ADAPTER_REGISTRY", {}, clear=True):
+        meta = fetcher.fetch_all("2026-08-05")  # 不應該拋例外
+
+    assert meta.sources[DataSourceKey.ISSUER_PCF].status == SnapshotStatus.ERROR
+    assert meta.sources[DataSourceKey.ISSUER_PCF].error_message
 
 
 def test_get_masks_token_in_raised_exception_message():

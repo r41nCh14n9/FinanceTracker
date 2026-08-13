@@ -35,6 +35,25 @@ def _make_valid_config_dir(tmp_path):
     })
     _write(config_dir / "broker_branches.json", {"branches": [{"code": "1020", "name": "凱基-台北"}]})
     _write(config_dir / "watchlist.json", {"stocks": ["2330"], "brokers": ["凱基-台北"], "etfs": ["0050"]})
+    _write(config_dir / "issuer_registry.json", {
+        "issuers": {
+            "yuanta": {
+                "name": "元大投信",
+                "isEnabled": True,
+                "adapter": "YuantaPcfAdapter",
+                "pcf_url_template": "https://www.yuantaetfs.com/tradeInfo/pcf/{etf_id}",
+                "etfs": ["0050"],
+            },
+            "cathay": {
+                "name": "國泰投信",
+                "isEnabled": False,
+                "adapter": "CathayPcfAdapter",
+                "pcf_url_template": "https://www.cathaysite.com.tw/funds/etf/pcf.aspx?fc={issuer_internal_code}",
+                "etfs": ["00878"],
+                "issuer_internal_codes": {"00878": "CN"},
+            },
+        }
+    })
     return config_dir
 
 
@@ -111,6 +130,58 @@ def test_invalid_thresholds_raises(tmp_path):
     _write(config_dir / "thresholds.json", {"default": {"broker_net_volume": 500}})
     with pytest.raises(ConfigError):
         ConfigLoader(config_dir=config_dir)
+
+
+def test_get_issuer_mapping_returns_expected_dict(tmp_path):
+    config_dir = _make_valid_config_dir(tmp_path)
+    config = ConfigLoader(config_dir=config_dir)
+
+    mapping = config.get_issuer_mapping("0050")
+    assert mapping["issuer"] == "yuanta"
+    assert mapping["adapter"] == "YuantaPcfAdapter"
+    assert mapping["pcf_url_template"] == "https://www.yuantaetfs.com/tradeInfo/pcf/{etf_id}"
+
+
+def test_watchlist_etf_without_issuer_mapping_raises(tmp_path):
+    config_dir = _make_valid_config_dir(tmp_path)
+    _write(config_dir / "watchlist.json", {"stocks": ["2330"], "brokers": ["凱基-台北"], "etfs": ["0050", "99999"]})
+
+    with pytest.raises(ConfigError, match="99999"):
+        ConfigLoader(config_dir=config_dir)
+
+
+def test_watchlist_etf_with_disabled_issuer_raises(tmp_path):
+    """00878 在 issuer_registry.json 裡有登記（國泰投信），但 isEnabled=False，
+    要跟「完全沒登記」的情況分開報錯，才能一眼看出是「還沒開發」還是「打錯代碼」。"""
+    config_dir = _make_valid_config_dir(tmp_path)
+    _write(config_dir / "watchlist.json", {"stocks": ["2330"], "brokers": ["凱基-台北"], "etfs": ["0050", "00878"]})
+
+    with pytest.raises(ConfigError, match="國泰投信"):
+        ConfigLoader(config_dir=config_dir)
+
+
+def test_issuer_registry_missing_issuers_key_raises(tmp_path):
+    config_dir = _make_valid_config_dir(tmp_path)
+    _write(config_dir / "issuer_registry.json", {})
+
+    with pytest.raises(ConfigError):
+        ConfigLoader(config_dir=config_dir)
+
+
+def test_get_enabled_issuers_only_returns_enabled_ones(tmp_path):
+    config_dir = _make_valid_config_dir(tmp_path)
+    config = ConfigLoader(config_dir=config_dir)
+
+    enabled = config.get_enabled_issuers()
+    assert set(enabled.keys()) == {"yuanta"}
+
+
+def test_get_available_etfs_by_issuer(tmp_path):
+    config_dir = _make_valid_config_dir(tmp_path)
+    config = ConfigLoader(config_dir=config_dir)
+
+    assert config.get_available_etfs_by_issuer("cathay") == ["00878"]
+    assert config.get_available_etfs_by_issuer("does-not-exist") == []
 
 
 def test_get_env_required_missing_raises(monkeypatch):

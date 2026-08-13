@@ -1,0 +1,76 @@
+{
+  "issuers": {
+    "yuanta": {
+      "name": "元大投信",
+      "isEnabled": true,
+      "adapter": "YuantaPcfAdapter",
+      "pcf_url_template": "https://www.yuantaetfs.com/tradeInfo/pcf/{etf_id}",
+      "etfs": ["0050", "0056", "00940"]
+    },
+    "fubon": {
+      "name": "富邦投信",
+      "isEnabled": true,
+      "adapter": "FubonPcfAdapter",
+      "pcf_url_template": "https://websys.fsit.com.tw/FubonETF/Trade/Assets.aspx?stkId={etf_id}&lan=TW",
+      "etfs": ["006208"]
+    },
+    "cathay": {
+      "name": "國泰投信",
+      "isEnabled": false,
+      "adapter": "CathayPcfAdapter",
+      "pcf_url_template": "https://www.cathaysite.com.tw/funds/etf/pcf.aspx?fc={issuer_internal_code}",
+      "etfs": ["00878"],
+      "issuer_internal_codes": {
+        "00878": "CN"
+      }
+    },
+    "capital": {
+      "name": "群益投信",
+      "isEnabled": false,
+      "adapter": "CapitalPcfAdapter",
+      "pcf_url_template": "https://www.capitalfund.com.tw/etf/product/detail/{issuer_internal_code}/buyback",
+      "etfs": ["00919", "00982A"],
+      "issuer_internal_codes": {
+        "00919": "195"
+      }
+    },
+    "nomura": {
+      "name": "野村投信",
+      "isEnabled": false,
+      "adapter": "NomuraPcfAdapter",
+      "pcf_url_template": "https://www.nomurafunds.com.tw/API/ETFAPI/api/Fund/GetFundAssets",
+      "etfs": ["00980A"]
+    },
+    "uni": {
+      "name": "統一投信",
+      "isEnabled": false,
+      "adapter": "UniPcfAdapter",
+      "pcf_url_template": "https://www.ezmoney.com.tw/ETF/Fund/AssetExcelNPOI?fundCode={issuer_internal_code}",
+      "etfs": ["00981A"],
+      "issuer_internal_codes": {
+        "00981A": "49YTW"
+      }
+    },
+    "allianz": {
+      "name": "安聯投信",
+      "isEnabled": false,
+      "adapter": "AllianzPcfAdapter",
+      "pcf_url_template": "https://etf.allianzgi.com.tw/etf-info/{issuer_internal_code}",
+      "etfs": ["00984A"],
+      "issuer_internal_codes": {
+        "00984A": "E0001"
+      }
+    },
+    "fuhwa": {
+      "name": "復華投信",
+      "isEnabled": false,
+      "adapter": "FuhwaPcfAdapter",
+      "pcf_url_template": "https://www.fhtrust.com.tw/api/assets?fundID={issuer_internal_code}",
+      "etfs": ["00991A", "00929"],
+      "issuer_internal_codes": {
+        "00991A": "ETF23",
+        "00929": "ETF21"
+      }
+    }
+  }
+}

@@ -17,6 +17,8 @@ from datetime import datetime, timedelta, timezone
 import requests
 
 from src.config import ConfigLoader
+from src.issuer_pcf.base import IssuerPcfProvider
+from src.issuer_pcf.registry import ADAPTER_REGISTRY
 from src.models import (
     BrokerTradeRecord,
     DailySnapshotMeta,
@@ -49,7 +51,7 @@ _TRADING_DAY_SOURCES = frozenset({
     DataSourceKey.FINMIND_PRICE,
     DataSourceKey.FINMIND_MARKET,
     DataSourceKey.FINMIND_BROKER,
-    DataSourceKey.TWSE_PCF,
+    DataSourceKey.ISSUER_PCF,
 })
 
 # TaiwanStockInstitutionalInvestorsBuySell / TaiwanStockTotalInstitutionalInvestors
@@ -230,33 +232,20 @@ class FinMindClient:
         }
 
 
-class TwsePcfClient:
-    """證交所 PCF API 的薄封裝，取得 ETF 當日成分股清單。"""
-
-    _BASE_URL = "https://www.twse.com.tw/rwd/zh/ETF/pcf"
-
-    def fetch_holdings(self, etf_id: str, snapshot_date: str) -> list[dict]:
-        resp = requests.get(
-            self._BASE_URL,
-            params={"stockNo": etf_id, "date": snapshot_date.replace("-", "")},
-            timeout=_REQUEST_TIMEOUT_SECONDS,
-        )
-        resp.raise_for_status()
-        return resp.json().get("data", [])
-
-
 class Fetcher:
     def __init__(
         self,
         config: ConfigLoader,
         storage: SnapshotRepository,
         finmind_client: FinMindClient | None = None,
-        twse_client: TwsePcfClient | None = None,
+        issuer_providers: dict[str, IssuerPcfProvider] | None = None,
     ):
         self._config = config
         self._storage = storage
         self._finmind_client = finmind_client or FinMindClient(config.get_env("FINMIND_TOKEN"))
-        self._twse_client = twse_client or TwsePcfClient()
+        # 依 ETF 代碼覆寫要用哪個 provider，主要給測試用假物件取代真正的爬蟲；
+        # 沒被覆寫的 ETF 一律依設定檔查 ADAPTER_REGISTRY 動態決定。
+        self._issuer_providers = issuer_providers or {}
 
     def fetch_all(self, snapshot_date: str) -> DailySnapshotMeta:
         sources: dict[str, SourceStatus] = {
@@ -264,7 +253,7 @@ class Fetcher:
             DataSourceKey.FINMIND_PRICE: self._fetch_stock_trading(snapshot_date),
             DataSourceKey.FINMIND_BALANCE_SHEET: self._fetch_capital_stock(snapshot_date),
             DataSourceKey.FINMIND_MARKET: self._fetch_market_institutional(snapshot_date),
-            DataSourceKey.TWSE_PCF: self._fetch_etf_holdings(snapshot_date),
+            DataSourceKey.ISSUER_PCF: self._fetch_etf_holdings(snapshot_date),
         }
         if self._config.is_broker_monitoring_enabled():
             sources[DataSourceKey.FINMIND_BROKER] = self._fetch_broker_trades(snapshot_date)
@@ -402,9 +391,10 @@ class Fetcher:
         last_error = None
         for etf_id in self._config.get_watchlist_etfs():
             try:
-                raw_rows = self._twse_client.fetch_holdings(etf_id, snapshot_date)
-            except Exception as exc:  # noqa: BLE001
-                logger.warning("證交所 PCF 抓取失敗（%s）：%s", etf_id, exc)
+                provider = self._resolve_issuer_provider(etf_id)
+                raw_rows = provider.fetch_holdings(etf_id, snapshot_date)
+            except Exception as exc:  # noqa: BLE001 - 單一投信失敗不能讓其他 ETF 抓不到
+                logger.warning("投信官網 PCF 抓取失敗（%s）：%s", etf_id, exc)
                 last_error = str(exc)
                 continue
             if not raw_rows:
@@ -418,6 +408,13 @@ class Fetcher:
         if last_error:
             return SourceStatus(status=SnapshotStatus.ERROR, error_message=last_error)
         return SourceStatus(status=SnapshotStatus.NO_DATA)
+
+    def _resolve_issuer_provider(self, etf_id: str) -> IssuerPcfProvider:
+        if etf_id in self._issuer_providers:
+            return self._issuer_providers[etf_id]
+        mapping = self._config.get_issuer_mapping(etf_id)
+        adapter_cls = ADAPTER_REGISTRY[mapping["adapter"]]
+        return adapter_cls()
 
     def _to_institutional_trade_record(self, row: dict) -> InstitutionalTradeRecord:
         return InstitutionalTradeRecord(
