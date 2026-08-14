@@ -36,7 +36,7 @@
     },
     "nomura": {
       "name": "野村投信",
-      "isEnabled": false,
+      "isEnabled": true,
       "adapter": "NomuraPcfAdapter",
       "pcf_url_template": "https://www.nomurafunds.com.tw/API/ETFAPI/api/Fund/GetFundAssets",
       "etfs": ["00980A"]
