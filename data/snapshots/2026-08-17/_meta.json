@@ -1,0 +1,31 @@
+{
+  "snapshot_date": "2026-08-17",
+  "sources": {
+    "FINMIND_INSTITUTIONAL": {
+      "status": "OK",
+      "fetched_at": "2026-08-17T10:18:20.111498+00:00",
+      "error_message": null
+    },
+    "FINMIND_PRICE": {
+      "status": "OK",
+      "fetched_at": "2026-08-17T10:18:21.012862+00:00",
+      "error_message": null
+    },
+    "FINMIND_BALANCE_SHEET": {
+      "status": "OK",
+      "fetched_at": "2026-08-17T10:18:21.012990+00:00",
+      "error_message": null
+    },
+    "FINMIND_MARKET": {
+      "status": "OK",
+      "fetched_at": "2026-08-17T10:18:21.477357+00:00",
+      "error_message": null
+    },
+    "TWSE_PCF": {
+      "status": "ERROR",
+      "fetched_at": null,
+      "error_message": "Expecting value: line 1 column 1 (char 0)"
+    }
+  },
+  "is_trading_day": true
+}

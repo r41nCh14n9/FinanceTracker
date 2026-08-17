@@ -1,0 +1,26 @@
+[
+  {
+    "scope": "MARKET",
+    "trigger_type": "MARKET_FOREIGN",
+    "stock_id": null,
+    "estimated_amount": 45447285026,
+    "market_cap_tier": null,
+    "volume_ratio_pct": null
+  },
+  {
+    "scope": "MARKET",
+    "trigger_type": "MARKET_TRUST",
+    "stock_id": null,
+    "estimated_amount": -17746662101,
+    "market_cap_tier": null,
+    "volume_ratio_pct": null
+  },
+  {
+    "scope": "STOCK",
+    "trigger_type": "VOLUME_AND_AMOUNT",
+    "stock_id": "2330",
+    "estimated_amount": 6078561600,
+    "market_cap_tier": "LARGE",
+    "volume_ratio_pct": 18.785405270375072
+  }
+]
