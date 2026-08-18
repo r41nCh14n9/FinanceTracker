@@ -1,0 +1,14 @@
+[
+  {
+    "trade_date": "2026-08-18",
+    "stock_id": "2330",
+    "trading_volume": 19997213,
+    "close_price": 2380.0
+  },
+  {
+    "trade_date": "2026-08-18",
+    "stock_id": "2454",
+    "trading_volume": 9323808,
+    "close_price": 3885.0
+  }
+]
