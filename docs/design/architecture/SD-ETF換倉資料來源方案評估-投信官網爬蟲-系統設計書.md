@@ -6,7 +6,7 @@
 | 設計依據 | [SA-ETF換倉資料來源方案評估-投信官網爬蟲可行性分析.md](../../analysis/requirements/SA-ETF換倉資料來源方案評估-投信官網爬蟲可行性分析.md) |
 | 相關文件 | [SD-籌碼監控推播引擎-系統設計書.md](./SD-籌碼監控推播引擎-系統設計書.md)（原始 SD 文件，本文件**取代**其中 ETF PCF 資料來源相關設計）、[SD-三大法人買賣超關注清單通知-系統設計書.md](./SD-三大法人買賣超關注清單通知-系統設計書.md)（同批次既有異動，本次範疇不涉及三大法人／分點部分，二者互不影響） |
 | 對象讀者 | SD／開發人員／維護人員 |
-| 建立日期 | 2026-08-10（第二輪補充：2026-08-10；第三輪補充：2026-08-10；第四輪補充：2026-08-10；第五輪補充：2026-08-10；第六輪補充：2026-08-11；第七輪補充：2026-08-11；第八輪補充：2026-08-12；第九輪補充：2026-08-12） |
+| 建立日期 | 2026-08-10（第二輪補充：2026-08-10；第三輪補充：2026-08-10；第四輪補充：2026-08-10；第五輪補充：2026-08-10；第六輪補充：2026-08-11；第七輪補充：2026-08-11；第八輪補充：2026-08-12；第九輪補充：2026-08-12；第十輪補充：2026-08-14；第十一輪補充：2026-08-14；第十二輪補充：2026-08-14；第十三輪補充：2026-08-17） |
 | 作者 | Claude Code（依 Roy Chiang 確認之設計方向整理） |
 | 套件歸屬 | 既有專案 `FinanceTracker`，單一 Python 套件 `src/`；本次新增子套件 `src/issuer_pcf/` |
 
@@ -22,7 +22,11 @@
 | 第六輪 | Roy Chiang 提供野村／統一／復華／中信四家投信的候選 API 端點（推測為其自行以瀏覽器開發者工具查得），逐一以實際請求測試可用性。**重大正面發現**：野村投信端點（`GetFundTradeInfo`）**完全可行**，回傳乾淨 JSON，且可直接用市場代碼（ticker）查詢，技術複雜度為本次查證中最低、優於原先「JS 動態渲染」的判斷；復華投信端點（`api/assets`）**確認可行**，但需内部 `fundID` 對照表；統一投信端點確認為 **Excel 匯出端點**（非原猜測的 JSON API），內容完整可用，但需處理 302 導向 Cookie 機制與內部 `fundCode` 對照表。**重大負面發現**：中信投信端點測得 Token 驗證持續失敗，經檢查回應標頭確認其網站受 **Imperva Incapsula 商用 WAF（Web 應用防火牆）防護**，非單純程式邏輯問題，判定不具技術可行性，建議不再投入嘗試繞過。街口投信依 Roy Chiang 指示（目前標的與台股關連性低）不予排入 |
 | 第七輪 | Roy Chiang 追加提供野村（`GetFundList`／`GetFundAssets`）、統一（`Fund/Index` 列表頁、修正後的 `Info?fundCode=49YTW`）、復華（`etf_list` 列表頁）之候選端點，逐一實測。**野村**：`GetFundAssets` 確認為比第六輪 `GetFundTradeInfo` 更乾淨的持股端點（`Table.Columns`/`Table.Rows` 結構化格式），`GetFundList` 確認可作為「野村旗下全部 ETF 清單」的動態驗證來源，取代手動維護清單；兩者皆**不需**內部代碼、可直接用 ticker 查詢，技術可行性再獲確認。**復華**：`etf_list` 頁面確認可直接爬取「市場代碼 ↔ 內部 `fundID`」完整對照表（如 `00991A↔ETF23`、`00929↔ETF21`），取代人工逐筆建表。**統一**：`Fund/Index` 頁面確認可直接爬取「市場代碼 ↔ 內部 `fundCode`」完整對照表；**同時發現並更正第六輪一項錯誤**——第六輪誤將 `fundCode=63YTW` 對應為 `00981A`，經本輪查證證實 `63YTW` 實際對應 `00403A`（主動統一升級50），`00981A` 正確對應的 `fundCode` 應為 `49YTW`；`Info` 頁面確認為一般 HTML（頁面內嵌持股表格文字），未查得獨立的持股 JSON API，故仍以 `AssetExcelNPOI`（已用正確 `fundCode=49YTW` 複驗成功）作為建議資料來源。中信投信依 Roy Chiang 指示（同街口，因防爬蟲阻擋），暫不排入，待後續確認取得方法再調整 |
 | 第八輪 | Roy Chiang 要求針對 Phase 1（元大＋富邦）實際查證 robots.txt／服務條款、並逐條驗證元大渲染時期實測到的 8 支候選 API。**富邦（重大正面突破）**：查得姊妹頁面 `Trade/Assets.aspx?stkId={etf_id}&lan=TW`（`ddate` 參數可省略，預設回傳最新交易日資料），才是成分股明細真正位置，靜態 HTML 一次回傳完整 55 檔股票（含股票代碼／名稱／股數／金額／權重%），無分頁無展開；**但同頁另有「期貨」「附買回債券」表格，解析器須鎖定 `<h6>股票</h6>` 後的表格，不可抓第一個 table**，§六 待確認事項第 1 順位（原第三輪高優先項）正式解除。**元大（重大負面修正）**：實測 Roy Chiang 提供的 8 支頁面渲染期 API（`ETFRaisingAD`／`PageWarningMsg`／`ETFWarning/HomeBottom`／`ETFService/GetContact`／`ETFService/GetService`／`ETF/GetLatestIndex`／`ETFMarquee`／`ETFTag/GetProductInformation`），全數回傳 HTTP 200 但**沒有一支是 PCF 持股資料**（分別為廣告版位、頁面警語、法遵聲明、客服資訊、頁尾服務連結、追蹤指數行情、跑馬燈、ETF 產品目錄），證實 PCF 頁面**不存在**獨立的持股資料 API；追查原始 HTML 與 JS bundle 後確認：該頁採 Nuxt.js SSR，「展開」按鈕是純前端顯示筆數開關（非額外 AJAX 請求），完整持股資料是後端渲染當下就序列化進頁尾 `window.__NUXT__=(function(...){...})(...)` 這包參數去重壓縮格式裡，並非乾淨 JSON，也不是單純 `BeautifulSoup` 解析 HTML 表格可以取得（原始 HTML 實測只看得到 5 列）；`YuantaPcfAdapter` 原「低複雜度、已完工」定性需下修，§六 待確認事項第 3 項改列為「已確認，且複雜度高於預期」，解析策略待重新設計（見 §一、§六）。**附帶收穫**：`ETFTag/GetProductInformation` 為元大官方完整 ETF 產品清單 API（含 `STK_CD`／`FUND_NAME`），可作為未來校驗 watchlist 的官方來源；`ETFService/GetService` 內含隱私權政策正式連結 `https://openweb.yuantafunds.com/privacy/`。**robots.txt 查證**：元大 `yuantaetfs.com` 全站 `Allow: /`；富邦 `websys.fsit.com.tw` 雖整體 `Disallow: /`，但明確 `Allow: /FubonETF`，本次用到的 `Pcf.aspx`／`Assets.aspx` 皆在允許路徑內；兩站頁面文字掃描未見「禁止爬蟲」等明文字樣，機器可查部分已排除疑慮，服務條款全文仍待 Roy Chiang 親自過目定案 |
-| 第九輪（本次補充） | Roy Chiang 要求針對第八輪遺留的未確認項目逐一解決，直到 Phase 1 可正式開始實作。實際動手驗證元大 `window.__NUXT__` 解析可行性：以一支僅用 Node.js 內建 `vm`／`fs` 模組（無 npm 套件相依）的極簡腳本，將 `window.__NUXT__=(function(...){...})(...)` 運算式放進沙箱執行，取回物件的 `fetch[].pcfData.InKind.FundComposition` 即為完整成分股清單，**已用 `0050`／`0056` 交叉驗證，皆完整取回 50/50 筆**，欄位 `stkcd`／`name`／`qty` 對應 `component_stock_id`／`component_name`／`holding_shares`，`pcfData.PCF.trandate` 可沿用既有交易日期防呆邏輯。此方案需 Python 以 `subprocess` 呼叫 Node.js 子行程，是本專案首次引入 Python 以外的執行期相依，經與 Roy Chiang 討論後**正式拍板採用**（GitHub Actions `ubuntu-latest` 預設內建 Node.js，免額外安裝；本機開發需自行安裝）。§六 待確認事項第 2、3、20 項本輪正式解除，`YuantaPcfAdapter`／`FubonPcfAdapter` 技術面待確認事項全數清除，**Phase 1（元大＋富邦）正式進入可實作狀態**，僅餘服務條款全文之人工法律判斷（§六 #1／#21）屬「上線前需完成」而非「動工前阻塞項」 |
+| 第九輪 | Roy Chiang 要求針對第八輪遺留的未確認項目逐一解決，直到 Phase 1 可正式開始實作。實際動手驗證元大 `window.__NUXT__` 解析可行性：以一支僅用 Node.js 內建 `vm`／`fs` 模組（無 npm 套件相依）的極簡腳本，將 `window.__NUXT__=(function(...){...})(...)` 運算式放進沙箱執行，取回物件的 `fetch[].pcfData.InKind.FundComposition` 即為完整成分股清單，**已用 `0050`／`0056` 交叉驗證，皆完整取回 50/50 筆**，欄位 `stkcd`／`name`／`qty` 對應 `component_stock_id`／`component_name`／`holding_shares`，`pcfData.PCF.trandate` 可沿用既有交易日期防呆邏輯。此方案需 Python 以 `subprocess` 呼叫 Node.js 子行程，是本專案首次引入 Python 以外的執行期相依，經與 Roy Chiang 討論後**正式拍板採用**（GitHub Actions `ubuntu-latest` 預設內建 Node.js，免額外安裝；本機開發需自行安裝）。§六 待確認事項第 2、3、20 項本輪正式解除，`YuantaPcfAdapter`／`FubonPcfAdapter` 技術面待確認事項全數清除，**Phase 1（元大＋富邦）正式進入可實作狀態**，僅餘服務條款全文之人工法律判斷（§六 #1／#21）屬「上線前需完成」而非「動工前阻塞項」 |
+| 第十輪 | Roy Chiang 提供國泰投信官方 API 端點之 Postman 實測截圖（`cwapi.cathaysite.com.tw`，與第五輪查證回應 `403 Forbidden` 的舊頁面 `www.cathaysite.com.tw/funds/etf/pcf.aspx` 為不同網域／端點），**確認技術路徑完全翻轉**：`GetETFList`（以 `Keyword=` 帶市場代碼查詢，回傳含 `fundCode` 之對照結果，如 `00878→fundCode=CN`）可動態取代人工維護「ticker↔內部代碼」對照表；`GetETFDetailStockList`（`FundCode`＋`SearchDate` 查詢）回傳乾淨 JSON 成分股清單（`stockCode`／`stockName`／`volumn`／`weights`），皆為 `HTTP 200`，原第五輪 403 Forbidden 之風險判斷不再適用於此組端點。§一「受支援投信範圍評估」國泰投信列複雜度由「高（403 Forbidden）」下修為與群益同等級的「低～中」；§六 待確認事項第 7、11 項本輪解除。經 Roy Chiang 確認後**實作並正式開通**：`CathayPcfAdapter` 完成、`issuer_registry.json.cathay.isEnabled` 改為 `true`、`watchlist.json.etfs` 加入 `00878`，並以正式環境即時查證（含平日／週末各日期）確認資料正確、非交易日 API 明確回傳「查無資料」而非誤植前一日舊資料 |
+| 第十一輪 | 國泰開通後 Roy Chiang 追問 §六 #21「服務條款」查證的實質內容，發現文件先前附的元大／富邦連結其實是「隱私權聲明」而非「服務條款／使用者條款」（兩者性質不同，後者才是通常會出現「禁止自動化擷取」字樣的地方）。本輪重新查證：(1) 元大／富邦首頁原始碼以關鍵字（條款／聲明／Terms／Agreement）搜尋，**皆只找到隱私權聲明頁面，找不到獨立的服務條款頁面**；(2) 國泰兩個網域（`www.cathaysite.com.tw`／`cwapi.cathaysite.com.tw`）之 `robots.txt` 皆**不存在**（一個回「資源已移除」、一個完全空白），代表國泰先前開通時**未經過第八輪對元大／富邦做過的 robots.txt 查證**，本輪補上。**Roy Chiang 確認定案**：三家投信官網皆查無可審閱之獨立服務條款頁面，已盡合理查證義務，`robots.txt`／頁面關鍵字掃描亦皆未見明文禁止自動化擷取字樣，**不構成阻塞，§六 #21 正式解除**（收尾方式改為「查無條款可看」而非「已看過條款」） |
+| 第十二輪 | Roy Chiang 提供群益投信官方 API 端點之 Postman 實測截圖（`www.capitalfund.com.tw/CFWeb/api/etf/...`），逐一實測後**完全解除**§一原先「需額外建立 ticker↔內部數字 ID 對照表」的限制，且發現的資料品質優於原設計（HTML 表格解析）：`POST /CFWeb/api/etf/list` 可動態查出「市場代碼↔`fundNo`」完整對照（已用 `00919→fundNo=195`、`00982A→fundNo=399` 交叉驗證），取代人工建表；`POST /CFWeb/api/etf/buyback`（`{fundId, date}`）回傳結構化 JSON，持股清單位於 `data.stocks[]`（非 `data.pcf`，`pcf` 只是 NAV／受益權單位數等基金層級概況，跟富邦當初誤把 `Pcf.aspx` 當成成分股頁面是同一類陷阱，這次一開始就查證清楚兩者不同），已用 `fundId=195` 實測取回 40 檔完整持股（`stocNo`／`stocName`／`share`／`weight`）。**日期語意已完整驗證**：Request `date` 直接對應回傳 `stocks[].date1`（即所查詢日期本身的持股，非 T-1），非交易日（週末實測）API 回傳 `HTTP 200` 但 `code: 400`／`data: null`，明確區分「查無資料」與「成功」，比國泰的 `result: null` 更明確。§一「受支援投信範圍評估」群益投信列複雜度由「中」下修為「低」（與元大／富邦／國泰同級，且不需 Headless Browser、不需 Cookie 工作階段）；§六 #7 群益部分正式解除。經 Roy Chiang 確認後**實作並正式開通**：`CapitalPcfAdapter` 完成、`issuer_registry.json.capital.isEnabled` 改為 `true`、`watchlist.json.etfs` 加入 `00919`，並以正式環境即時查證確認資料正確 |
+| 第十三輪（本次補充） | Roy Chiang 要求盤點「這個需求還差多少能完成實作」，逐項確認後動手處理三件事：<br>- **SA §六「解析健全性檢查機制」正式實作**：`Fetcher._fetch_etf_holdings()` 新增 `_is_holding_count_anomaly()`，把當天解析筆數跟前一交易日比對，跌幅達門檻（`thresholds.json.default.etf_holding_drop_pct`，預設 50%）視為投信網站改版造成的解析異常，不寫入快照。§四業務邏輯表原「解析結果基本健全性檢查」一列「不需新增邏輯，既有判斷式已涵蓋」的敘述**經本輪確認為不完整**（只擋得住剛好 0 筆的情況，擋不住「40 檔變 3 檔」這種劇烈但非 0 的殘缺資料），已更正為實際落地方案。<br>- **意外挖出並修正一個更嚴重的既有 bug**：手動驗證健全性檢查時發現，`main.py._classify_rebalance_events()` 直接把 `storage.read_etf_holdings(target_date, etf_id)` 的結果（檔案不存在時回傳 `[]`）當成「今天的真實持股」跟前一天比對——這代表只要某檔 ETF 當天**完全沒抓到資料**（例如元大／統一頁面「只顯示最新一天」的已知限制，查詢日期剛好不是頁面當下顯示的日期），就會被誤判成「持股歸零」，把該 ETF 原有的每一檔持股都當成「完全清倉」推播出去。這比「筆數驟降」的情境更嚴重，且在實測 8/17 資料時**真實觸發**（0050 當天因元大頁面日期不符沒抓到資料，觸發前 50 檔全部誤判清倉）。修正：`_classify_rebalance_events()` 改為 `curr_holdings` 為空時直接跳過該 ETF 的比對，不產生任何事件；已補上 `tests/test_main.py` 鎖住這個行為，並用 8/17 真實資料重跑 dry-run 確認不再誤報。<br>- **統一投信（Phase 3）正式實作開通**：確認 `AssetExcelNPOI`／`Fund/Index` 端點仍如文件記載正常運作，但技術複雜度明顯高於國泰/群益——回傳格式是真的 Excel（`.xlsx`）而非 JSON，需新增 `openpyxl` 套件依賴（經 Roy Chiang 確認採用）；需 `requests.Session()` 兩段式 Cookie 工作階段（先訪首頁）；持股表跟期貨/現金部位混在同一張工作表，需定位「股票」區塊；資料日期為民國年格式（如 `115/08/14`），需換算西元年才能跟 `snapshot_date` 比對。`UniPcfAdapter` 完成並正式開通（`isEnabled: true`，`watchlist.json` 加入 `00981A`）。<br>- **復華投信（Phase 3）確認為阻塞狀態，本輪未實作**：第六／七輪記錄的 `GET /api/assets?fundID=...` JSON 端點本輪實測**已失效**，回傳的是官網首頁 HTML 而非資料——復華官網已改版為 Vue.js SPA 架構（`data-template="index"`／`@vue:mounted` 等屬性），且持股明細頁未見任何 SSR 內嵌狀態（不像元大的 `__NUXT__` 可取巧），純前端渲染，靜態請求看不到實際資料。`etf_list` 列表頁本身還在、ticker↔`fundID` 對照連結格式還找得到（`/ETF/etf_detail/ETF23`），但沒有底層 API 可用。這是 SA 文件當初提醒的「投信網站改版讓 adapter 靜默失效」在**開發前**就先發生的例子。經 Roy Chiang 確認**擱置**，待有人以瀏覽器開發者工具重新查得新版底層 API（比照國泰/群益的模式）才能重啟評估，§六新增 #22 追蹤 |
 
 ### 與 SA 文件的關鍵差異對照
 
@@ -71,8 +75,8 @@ SA 文件第六章列出多項待確認事項，本文件為對應決策結果�
 | :--- | :--- | :--- | :--- | :--- |
 | 元大投信 | Path 參數：`https://www.yuantaetfs.com/tradeInfo/pcf/{etf_id}` | ✅ 可直接用 ticker | **中～高（🔴 第八輪下修：原始 HTML 實測僅 5 列，完整持股需解析頁尾 `window.__NUXT__` SSR 壓縮狀態，非單純 `BeautifulSoup` 解析靜態表格，且無獨立 AJAX API 可替代，見 §六）** | **Phase 1（設計需依第八輪發現調整，原「已完工」需重新檢視）** |
 | 富邦投信 | Query 參數：`https://websys.fsit.com.tw/FubonETF/Trade/Pcf.aspx?stkId={etf_id}&lan=TW`；**成分股明細改用姊妹頁 `https://websys.fsit.com.tw/FubonETF/Trade/Assets.aspx?stkId={etf_id}&lan=TW`（🟢 第八輪查明，`ddate` 參數可省略）** | ✅ 可直接用 ticker（URL 參數已驗證生效） | **低（🟢 第八輪上修：`Assets.aspx` 為靜態 HTML，一次回傳完整 55 檔股票，無分頁無展開；僅需注意頁面同時有期貨／股票／附買回債券三張表，解析器須鎖定「股票」區塊）** | **Phase 1（本次一併納入，成分股位置已查明，可正式定案設計）** |
-| 國泰投信 | Query 參數：`https://www.cathaysite.com.tw/funds/etf/pcf.aspx?fc={投信內部代碼}`（例：`00878` 對應 `fc=CN`） | ❌ 需額外建立「ticker ↔ 投信內部代碼」對照表 | **高（🔴 第五輪新發現：本次查證請求被回應 `HTTP 403 Forbidden`，疑似有防爬蟲機制，非僅「規則複雜」而已，見下方詳述）** | **Phase 2（已定案，可行性存疑，待 Roy Chiang 決策，見 §六）** |
-| 群益投信 | Path 參數帶內部數字 ID：`https://www.capitalfund.com.tw/etf/product/detail/{內部ID}/buyback`（例：`00919` 對應 `195`） | ❌ 需額外建立「ticker ↔ 投信內部 ID」對照表 | 中（✅ 第五輪確認：靜態 HTML 完整表格＋日期＋下載按鈕，內容本身無阻擋） | **Phase 2（已定案，本次不實作，見 §六）** |
+| 國泰投信 | Query 參數：~~`https://www.cathaysite.com.tw/funds/etf/pcf.aspx?fc={投信內部代碼}`（例：`00878` 對應 `fc=CN`）~~ **（🟢 第十輪更正）改用官方 API**：`GET https://cwapi.cathaysite.com.tw/api/ETF/GetETFList?Keyword={市場代碼}`（查代碼對照）＋`GET https://cwapi.cathaysite.com.tw/api/ETF/GetETFDetailStockList?FundCode={內部代碼}&SearchDate={日期}`（查持股） | ⚠️ 需 `fundCode` 內部代碼，**但 `GetETFList` 可動態查詢取得（🟢 第十輪新發現，同野村/復華/統一模式），不需人工維護對照表** | **低～中（🔴 第五輪：曾查證請求被回應 `HTTP 403 Forbidden`，疑似防爬蟲機制；🟢 第十輪逆轉：改用 Roy Chiang 提供之 `cwapi.cathaysite.com.tw` 官方 API，兩端點皆 `HTTP 200` 回傳乾淨 JSON，403 問題不再適用，見下方第十輪新增段落）** | **Phase 2（已定案；🟢 第十輪：技術可行性風險已解除，是否提前開發排序待 Roy Chiang 確認，見 §六 #11）** |
+| 群益投信 | ~~Path 參數帶內部數字 ID：`https://www.capitalfund.com.tw/etf/product/detail/{內部ID}/buyback`（HTML 頁面）~~ **（🟢 第十二輪更正）改用官方 JSON API**：`POST https://www.capitalfund.com.tw/CFWeb/api/etf/list`（查代碼對照）＋`POST https://www.capitalfund.com.tw/CFWeb/api/etf/buyback`（`{fundId, date}` 查持股，資料在 `data.stocks[]`） | ⚠️ 需 `fundNo` 內部代碼，**但 `list` 端點可動態查詢取得（🟢 第十二輪新發現，同野村/復華/統一/國泰模式），不需人工維護對照表** | **低（🟢 第十二輪下修：改用 JSON API 取代 HTML 表格解析，40 檔持股一次回傳，日期語意清楚、非交易日明確回 `code:400`，見下方第十二輪新增段落）** | **Phase 2（已定案；🟢 第十二輪：技術可行性與複雜度已與元大/富邦/國泰同級，是否提前開發排序待 Roy Chiang 確認，見 §六 #7）** |
 | 安聯投信 | Path 帶內部代碼：`https://etf.allianzgi.com.tw/etf-info/{內部代碼}`（例：`00984A` 對應 `E0001`） | ❌ 需額外建立「ticker ↔ 投信內部代碼」對照表 | **高（🔴 第五輪新發現：頁面為 JS 前端動態渲染 SPA，靜態請求僅拿到頁面標題「安聯ETF」，無實際內容，需 Headless Browser 或另尋底層 API）** | **Phase 3（觀察名單）** |
 | 野村投信 | `nomurafunds.com.tw/ETFWEB/pcf` | ❓ 未查明 | **高（🔴 第五輪新發現：與安聯同樣為 JS 前端動態渲染 SPA，靜態請求無法取得實際內容）** | **Phase 3（觀察名單，因 `00980A` 而納入）** |
 | 統一投信 | **（🔴 第五輪更正）** 正確網址為 `https://www.ezmoney.com.tw/ETF/Transaction/PCF`（原第二／四輪誤標註為 `tsit.com.tw`，該網址實為台新投信，已更正） | ❓ 未查明 | **高（🔴 第五輪新發現：查證時發生「重導向次數過多」錯誤，可能為 session/cookie 機制或反爬蟲重導向，需人工以瀏覽器實測釐清）** | **Phase 3（觀察名單，因 `00981A` 而納入）** |
@@ -150,6 +154,26 @@ SA 文件第六章列出多項待確認事項，本文件為對應決策結果�
 
 此方案需要 Python 以 `subprocess` 呼叫本機 Node.js 執行該腳本，是本專案首次引入 Python 以外的執行期相依，**Roy Chiang 已拍板採用**（見 §四／環境規格），理由：(1) 已用兩檔 ETF 實測驗證可靠，優於手刻 JS 物件語法解析器的脆弱性；(2) GitHub Actions `ubuntu-latest` 官方 runner 預設內建 Node.js，免額外安裝步驟；(3) 僅新增一支不需 `package.json`／`npm install` 的極簡腳本，維護面積小。§六 待確認事項第 2、3、20 項本輪正式解除，`YuantaPcfAdapter` 可依此正式定案設計與實作。
 
+**第十輪新增（Roy Chiang 提供國泰投信官方 API 端點實測，推翻第五輪 403 Forbidden 判斷）：** Roy Chiang 以 Postman 查得國泰投信另一組官方 API 端點（網域 `cwapi.cathaysite.com.tw`，與第五輪查證回應 `403 Forbidden` 的 `www.cathaysite.com.tw/funds/etf/pcf.aspx` 為**不同網域、不同端點**），逐一實測結果：
+
+| 端點 | 用途 | 實測結果 | 回傳資料內容 | 是否需內部代碼 |
+| :--- | :--- | :--- | :--- | :--- |
+| `GET /api/ETF/GetETFList?FundType=&Keyword={市場代碼}&CurrentPage=1&PerPageCount=20&status=1` | 以市場代碼查詢投信內部 `fundCode` 對照 | ✅ **HTTP 200，確認可行** | 乾淨 JSON，含 `fundCode`／`stockCode`／`stockShortName`／`fundName`／`fundTypeName` 等欄位，已用 `Keyword=00878` 實測成功取得 `fundCode=CN`（與第二輪人工查得之範例一致，交叉驗證正確） | ✅ **可取代人工維護**，比照野村 `GetFundList`／復華 `etf_list`／統一 `Fund/Index` 模式，Adapter 啟動時動態查詢即可，不需靜態對照表 |
+| `GET /api/ETF/GetETFDetailStockList?FundCode={內部代碼}&SearchDate={yyyy-MM-dd}&status=1` | 查詢指定日期之成分股持股明細 | ✅ **HTTP 200，確認可行** | 乾淨 JSON，含 `stockCode`／`stockName`／`volumn`（股數）／`weights`（權重%），已用 `FundCode=CN&SearchDate=2026-08-11` 實測成功（`00878` 國泰永續高股息） | ❌ **不需**，`FundCode` 由上一端點動態查得即可 |
+
+**結論：國泰投信技術可行性判斷本輪正式翻轉。** 第五輪的 `403 Forbidden` 是針對舊頁面 `funds/etf/pcf.aspx`（一般瀏覽器頁面），本輪查得的 `cwapi.cathaysite.com.tw` 為獨立 API 子網域，兩端點皆回應正常、內容乾淨結構化，且 `GetETFList` 可動態解決「ticker↔內部代碼」對照問題，**技術複雜度應由「高（403 Forbidden）」下修為與群益同等級的「低～中」**，甚至因不需人工維護對照表，實質上可能優於群益（見 §一表格更新）。§六 待確認事項第 7、11 項本輪解除；是否因此調整 Phase 2 內部開發排序（如優先於群益開發），或維持原定 Phase 2 一併開發，留待 Roy Chiang 確認（本次僅記錄技術查證結果，不逕行調整已由 Roy Chiang 第三輪拍板之 Phase 劃分）。
+
+**第十二輪新增（Roy Chiang 提供群益投信官方 API 端點實測，取代原 HTML 表格解析設計）：** Roy Chiang 以 Postman 查得群益投信官方 JSON API（`www.capitalfund.com.tw/CFWeb/api/etf/...`），逐一實測結果：
+
+| 端點 | 用途 | 實測結果 | 回傳資料內容 | 是否需內部代碼 |
+| :--- | :--- | :--- | :--- | :--- |
+| `POST /CFWeb/api/etf/list` | 查詢群益旗下全部 ETF 清單 | ✅ **HTTP 200，確認可行** | 乾淨 JSON（`data.funds[]`），含 `fundNo`／`stockNo`／`shortName`／`netValue` 等欄位，已用 `stockNo=00919` 實測取得 `fundNo=195`，並交叉驗證 `stockNo=00982A`（Phase 3 觀察名單之「主動群益台灣強棒」）對應 `fundNo=399`，兩者皆與人工查得之範例一致 | ✅ **可取代人工維護**，比照野村 `GetFundList`／復華 `etf_list`／統一 `Fund/Index`／國泰 `GetETFList` 模式，Adapter 啟動時動態查詢即可 |
+| `POST /CFWeb/api/etf/buyback`（Body：`{"fundId": "{內部代碼}", "date": "{yyyy-MM-dd}"}`） | 查詢指定日期之成分股持股明細 | ✅ **HTTP 200，確認可行** | 回應 `data` 底下分成 `pcf`／`stocks`／`bonds`／`futures`／`assets`／`rps`／`characteristics` 多個區塊；**持股清單在 `data.stocks[]`，不是 `data.pcf`**——`pcf` 只是基金層級概況（NAV、受益權單位數等，跟富邦當初誤把 `Pcf.aspx` 當成分股頁面是同一類陷阱）。已用 `fundId=195` 實測取回 **40 檔完整持股**，欄位 `stocNo`／`stocName`／`share`／`weight`／`date1` | ❌ **不需**，`fundId` 由上一端點動態查得即可 |
+
+**日期語意驗證**：以 `fundId=195` 分別帶入 `date=2026-08-11`／`2026-08-13`／`null`（預設）測試，確認 Request 的 `date` 直接對應回傳 `stocks[].date1`（即所查詢日期**本身**的持股，非 T-1；`data.pcf.date1`/`date2` 則是「查詢日／T-1」兩個基金層級的參考日期，不是持股資料的日期，避免日後誤用）。以週末日期（`2026-08-15`／`16`）測試非交易日行為，API 回傳 `HTTP 200` 但 `{"code": 400, "data": null, "message": "沒有查詢到該條件的資料"}`，**比國泰的 `result: null` 更明確地用獨立的 `code` 欄位區分「查無資料」與「成功」**，Adapter 可直接判斷 `code != 200 or data is None` 對應既有的 NO_DATA 語意。
+
+**結論：群益投信原設計（HTML 頁面表格解析）可整組升級為 JSON API 方案，且複雜度不升反降。** §一「受支援投信範圍評估」群益投信列複雜度由「中」下修為與元大／富邦／國泰同級的「低」；§六 待確認事項第 7 項（群益部分）本輪解除。本次僅記錄查證結果，**尚未實作 `CapitalPcfAdapter`**，`issuer_registry.json.capital.isEnabled` 維持 `false`；是否比照國泰模式提前開發，留待 Roy Chiang 確認。
+
 **第七輪帶來的設計啟示（提請 Roy Chiang 參考）：** 復華、統一（及理論上野村）皆提供「官方 ETF 列表頁／API」，內含市場代碼與內部代碼的完整對照。這代表 `etf_issuer_mapping.json` 的「市場代碼↔內部代碼」欄位**不一定需要人工逐筆維護**，可設計為 Adapter 啟動時先呼叫/爬取該投信的官方列表、動態建立對照，再查詢個別 ETF 持股——這比原先設想的「純手動維護對照表」更不易過期、也更貼近本專案「新增一檔 ETF＝設定檔新增一筆」的擴充精神；惟本次僅止於**驗證資料源本身可行**，是否採動態對照設計，或維持第二輪已定案的靜態 `issuer_internal_code` 欄位設計，建議留待 Phase 2/3 實際排入開發時再具體設計（見 §六）。
 
 **決策（回答使用者提問／確認 Phase 劃分）：**
@@ -157,7 +181,7 @@ SA 文件第六章列出多項待確認事項，本文件為對應決策結果�
 1. **需要先鎖定特定常見的幾家，不採「通用爬蟲」設計。** 上表證實各投信 payload 差異巨大，特別是國泰、群益、安聯用內部代碼而非市場代碼，若不逐家人工驗證就無法可靠組出正確 URL，通用化解析器不可行、也不安全。
 2. **`config/etf_issuer_mapping.json` 即是「目前受支援投信／ETF」的唯一真實來源（single source of truth）**：只有已完成查證並開發對應 Adapter 的投信，才會出現在這份設定檔中；`watchlist.json.etfs` 內只能填入已被此設定檔涵蓋的 ETF 代碼，其餘一律視為 `CONFIG_INVALID`（見 §四）。
 3. **Phase 1（本次）＝元大投信＋富邦投信**（Roy Chiang 第三輪拍板）：**第九輪起兩者皆已正式定案，可開始實作**——富邦（第八輪）查明 `Assets.aspx` 為成分股明細正確來源；元大（第九輪）驗證並經 Roy Chiang 拍板採用「Python 呼叫 Node.js 子行程解析 `window.__NUXT__`」方案，已用 `0050`／`0056` 交叉驗證取回完整 50/50 筆持股。Phase 1 技術面待確認事項全數清除，僅餘 §六 #1／#21 服務條款全文之人工法律判斷屬「上線前需完成」而非「動工前阻塞項」。
-4. **Phase 2＝國泰投信＋群益投信**（Roy Chiang 第三輪拍板）：兩者皆需先建立「市場代碼 ↔ 投信內部代碼」完整對照表才能開發 Adapter，本次不實作，待 Phase 1 穩定後排入。
+4. **Phase 2＝國泰投信＋群益投信**（Roy Chiang 第三輪拍板）：兩者皆需先建立「市場代碼 ↔ 投信內部代碼」完整對照表才能開發 Adapter，本次不實作，待 Phase 1 穩定後排入。**第十輪補充：國泰投信原第五輪 `403 Forbidden` 疑慮已透過 `cwapi.cathaysite.com.tw` 官方 API 解除，且該 API 可動態查詢對照表、不需人工維護，技術可行性判斷已與群益同級甚至更優，惟 Phase 排序本身仍以 Roy Chiang 拍板為準，本次不逕行調整。**（**後續：國泰已於第十輪實作並開通**，見 §六 #4／附註）**第十二輪補充：群益投信原設計（HTML 表格解析）已升級為官方 JSON API 方案，`list` 端點同樣可動態查對照表，複雜度與國泰同級，技術面已無阻礙；是否比照國泰模式提前實作，本次僅記錄查證結果，留待 Roy Chiang 確認。**
 5. **Phase 3＝觀察名單（第四輪新增，正式定調）**：野村、統一、安聯、復華四家投信因 Roy Chiang 提出的具體知名主動式 ETF 標的而正式列入觀察名單——**有明確 ETF 標的、但不承諾任何開發時程**，用途是讓路線圖溝通與未來評估有明確依據，區別於「連標的都還沒有」的其餘投信。**第五輪查證後需補充：Phase 3 內部技術確定性不一**——復華已確認內容可行（僅選單機制待查明）；安聯、野村經查證為 JS 動態渲染（見上方發現），在「不引入 Headless Browser」的既定架構原則下，可行性遠低於復華，若日後要將 Phase 3 升級為正式開發，復華應優先於安聯／野村。
 6. **永豐／街口／中信維持「待評估，無明確標的」，不排入任何時程且暫不列入 Phase 3**：與 Phase 3 的差異在於目前沒有使用者提出的具體監控需求，優先序低於 Phase 3 已有明確標的之投信。**第五輪查證後需補充：永豐投信技術可行性經確認為「低複雜度」（可直接用 ticker 組 URL、靜態表格），若未來使用者提出具體監控標的，可比照元大/富邦快速納入開發，優先序應高於街口（網域已 DNS 失敗）與中信（JS 動態渲染）。**
 
@@ -169,11 +193,11 @@ SA 文件第六章列出多項待確認事項，本文件為對應決策結果�
 | `0056` | 元大高股息 | 元大投信 | 1 | ✅ 支援（沿用同一 `YuantaPcfAdapter`，僅需於 `etf_issuer_mapping.json` 新增一筆設定） |
 | `00940` | 元大台灣價值高息 | 元大投信 | 1 | ✅ 支援（同上） |
 | `006208` | 富邦台灣釆吉50 | 富邦投信 | 1 | ✅ 支援（第八輪查明 `Trade/Assets.aspx` 為成分股明細來源，可正式設計實作） |
-| `00878` | 國泰永續高股息 | 國泰投信 | 2 | ❌ 本次不支援，待 Phase 2 開發並建立內部代碼對照 |
-| `00919` | 群益台灣精選高息 | 群益投信 | 2 | ❌ 本次不支援，待 Phase 2 開發並建立內部代碼對照 |
+| `00878` | 國泰永續高股息 | 國泰投信 | 2 | ❌ 本次不支援；技術可行性已於第十輪確認（見 §一），待 Phase 2 排入開發 |
+| `00919` | 群益台灣精選高息 | 群益投信 | 2 | ✅ 支援（第十二輪已實作並開通，`CapitalPcfAdapter`） |
 | `00980A` | 主動野村台灣優選 | 野村投信 | 3（觀察名單） | ❌ 不支援，僅列觀察，無開發時程 |
-| `00981A` | 主動統一台股增長 | 統一投信 | 3（觀察名單） | ❌ 不支援，僅列觀察，無開發時程 |
-| `00982A` | 主動群益台灣強棒 | 群益投信 | 2 | ❌ 本次不支援，待 Phase 2 群益 Adapter 完成後可望一併涵蓋 |
+| `00981A` | 主動統一台股增長 | 統一投信 | 3（觀察名單） | ✅ 支援（第十三輪已實作並開通，`UniPcfAdapter`；原「僅列觀察，無開發時程」定位提前解除） |
+| `00982A` | 主動群益台灣強棒 | 群益投信 | 2 | ⚠️ 技術上可行（隨 `CapitalPcfAdapter` 一併涵蓋），本次未實際加入 watchlist 測試，僅 `00919` |
 | `00984A` | 主動安聯台灣高息成長 | 安聯投信 | 3（觀察名單） | ❌ 不支援，僅列觀察；投信內部代碼對照尚未建立 |
 | `00991A` | 主動復華未來50 | 復華投信 | 3（觀察名單） | ❌ 不支援，僅列觀察，無開發時程 |
 | `00929` | 復華台灣科技優息 | 復華投信 | 3（觀察名單） | ❌ 不支援，同屬復華投信範圍，隨 `00991A` 一併列入觀察 |
@@ -417,7 +441,8 @@ class DataSourceKey(str, Enum):
 元大投信 PCF 頁面解析（**第九輪定案**） | 對 `pcf_url_template` 組出之 URL 發送 GET 取得原始 HTML；以 `subprocess` 呼叫 `node src/issuer_pcf/scripts/extract_nuxt_state.js <html內容或暫存檔路徑>`，取回 `window.__NUXT__` 沙箱解析後的 JSON，讀取 `fetch[].pcfData.InKind.FundComposition`（找出陣列中含 `pcfData` 鍵的元素，不寫死索引）取得成分股代碼／名稱／股數；並以 `pcfData.PCF.trandate`（`yyyyMMdd`）比對傳入 `snapshot_date` | `YuantaPcfAdapter.fetch_holdings()`（🔴 新增，**第九輪已定案並經雙 ETF 驗證，可正式實作**，不再是 `BeautifulSoup` 解析 HTML 表格，改為「HTTP 取頁面＋Node 子行程解析 SSR 狀態」兩段式） |
 | 交易日期防呆 | 頁面標示之交易日期若與查詢日期不同（例如網站尚未更新至最新交易日），視為 `NO_DATA` 而非直接採用「舊」資料當成「新」快照 | `YuantaPcfAdapter._parse_trade_date()`（🔴 新增），比對失敗回傳空清單（沿用既有「空清單＝NO_DATA」判斷式，見 `Fetcher._fetch_etf_holdings`） |
 | 未設定對照的 ETF | `watchlist.json.etfs` 內若出現未在 `etf_issuer_mapping.mappings` 設定對照的代碼，視為設定錯誤，啟動階段即中止 | `ConfigLoader._validate()`（🟡 修改）新增檢查 |
-| 解析結果基本健全性檢查 | 解析結果為 0 筆時沿用既有「空清單＝略過、標記 NO_DATA」語意，不誤判為成功 | 不需新增邏輯，`Fetcher._fetch_etf_holdings()` 既有判斷式已涵蓋 |
+| 解析結果基本健全性檢查（**第十三輪更正**） | 解析結果為 0 筆時沿用既有「空清單＝略過、標記 NO_DATA」語意，不誤判為成功；~~原敘述「不需新增邏輯，既有判斷式已涵蓋」經第十三輪確認為不完整~~——0 筆防呆擋不住「40 檔變 3 檔」這種劇烈但非 0 的殘缺資料，需另外比對前一交易日筆數 | `Fetcher._is_holding_count_anomaly()`（🔴 第十三輪新增），比對前一交易日持股筆數，跌幅達 `thresholds.json.default.etf_holding_drop_pct`（預設 50%）視為解析異常，不寫入快照 |
+| 換倉比對防呆（**第十三輪新增，修正既有 bug**） | ETF 當天完全沒抓到資料時（`curr_holdings` 為空），不能當成「持股歸零」去跟前一天比對，否則既有持股會整批被誤判成清倉事件 | `main.py._classify_rebalance_events()`（🟡 修改，屬 `SD-籌碼監控推播引擎-系統設計書.md` 範疇但因本次查證發現一併修正），`curr_holdings` 為空時跳過該 ETF 比對 |
 | **（第二輪）白名單錯誤訊息可讀性** | `watchlist.etfs` 內出現未受支援的 ETF 代碼時，錯誤訊息需明確告知「該 ETF 目前不受支援」而非泛用的欄位缺漏訊息，讓維運人員能立即判斷是「打錯代碼」還是「投信尚未開發 Adapter」 | `ConfigLoader._validate()` 訊息範例：`"watchlist.etfs 內 '00878' 尚未受支援（無對應 etf_issuer_mapping 設定），請確認代碼是否正確，或該投信是否已完成 Adapter 開發（見 SD 文件 §一受支援投信範圍）"` |
 | 富邦投信 PCF 頁面解析（**第八輪定案**） | 改對 `https://websys.fsit.com.tw/FubonETF/Trade/Assets.aspx?stkId={etf_id}&lan=TW`（`ddate` 參數可省略，預設回傳最新交易日資料）發送 GET，解析 HTML 表格取得成分股代碼／名稱／股數；頁面同時含期貨、股票、附買回債券三張表，解析器需先定位 `<h6>股票</h6>` 標題後方的表格再解析列 | `FubonPcfAdapter.fetch_holdings()`（🔴 新增，**第八輪查明 `Assets.aspx` 為成分股明細真正來源後正式定案**，以 `BeautifulSoup` 依「股票」區塊標頭定位表格後解析，不再是骨架／`NotImplementedError`） |
 
@@ -620,27 +645,29 @@ sequenceDiagram
 
 | # | 項目 | 待誰確認 | 確認結果 |
 | :--- | :--- | :--- | :--- |
-| 1 | 元大／富邦投信官網服務條款／`robots.txt` 是否明確禁止自動化擷取 | Roy Chiang | **部分確認（第八輪）：robots.txt 機器可查部分已排除疑慮——元大 `Allow: /`，富邦雖整體 `Disallow: /` 但明確 `Allow: /FubonETF`（本次用到的 `Pcf.aspx`／`Assets.aspx` 皆涵蓋在內）；兩站頁面文字掃描亦未見「禁止爬蟲」明文字樣。服務條款全文屬法律判斷，仍待 Roy Chiang 親自過目後定案，非本次 SD 階段阻塞項** |
+| 1 | 元大／富邦投信官網服務條款／`robots.txt` 是否明確禁止自動化擷取 | Roy Chiang | **已解除（第十一輪，見 #21）：robots.txt 機器可查部分第八輪已排除疑慮——元大 `Allow: /`，富邦雖整體 `Disallow: /` 但明確 `Allow: /FubonETF`（本次用到的 `Pcf.aspx`／`Assets.aspx` 皆涵蓋在內）；兩站頁面文字掃描亦未見「禁止爬蟲」明文字樣。第十一輪進一步查證「服務條款」本身：元大／富邦首頁皆只找得到隱私權聲明頁面，查無獨立的服務條款頁面可供審閱，Roy Chiang 確認以「已盡合理查證義務、查無條款可看」定案，不構成阻塞** |
 | 2 | 「匯出 excel」按鈕之實際下載端點是否值得後續改用（可能較 HTML 表格解析更穩定） | 開發人員 | **已解決（第九輪）：不再需要，已改採更可靠的 `window.__NUXT__` 解析方案（見 #3），匯出excel 端點不再列為候選路徑** |
 | 3 | 0050 完整 50 檔成分股是否確實已在原始 HTML 內（非 JS「展開」動態載入） | 開發人員 | **已解決（第九輪）：確認完整資料序列化於頁尾 `window.__NUXT__` 狀態內（非渲染後 HTML），以 Node.js `vm` 沙箱執行後可完整取回；已用 `0050`／`0056` 交叉驗證皆完整取回 50/50 筆持股（`fetch[].pcfData.InKind.FundComposition`），`YuantaPcfAdapter` 已可依此正式實作，見 §四 API 契約** |
 | 4 | Adapter 開發優先順序／Phase 劃分 | Roy Chiang | **已確認（第三／四輪定案）：Phase 1＝元大投信＋富邦投信（本次一併開發）；Phase 2＝國泰投信＋群益投信（皆需內部代碼對照表，本次不實作）；Phase 3（觀察名單）＝野村／統一／安聯／復華投信（因 `00980A`／`00981A`／`00984A`／`00991A`／`00929` 而列入，有明確標的但不承諾時程）；永豐／街口／中信因無明確標的維持「待評估」，優先序低於 Phase 3**（見 §一） |
 | 5 | 是否需要「連續 N 天解析失敗」的加強告警機制（例如另發 LINE 訊息提醒維運人員，而非僅記錄 Log） | Roy Chiang | 待確認（非本次阻塞項） |
 | 6（第三輪提出，✅ 第八輪解除） | ~~富邦投信 PCF 頁面尚未查得成分股「股票實物申贖」明細表的實際位置~~ | 開發人員 | **已解除（第八輪）：查得姊妹頁面 `Trade/Assets.aspx?stkId={etf_id}&lan=TW`（`ddate` 可省略）即為成分股明細正確來源，靜態 HTML 一次回傳完整 55 檔股票，`FubonPcfAdapter` 可正式定案設計與實作，見 §四 API 契約** |
-| 7（第二輪新增） | 國泰投信「ticker ↔ `fc` 內部代碼」、群益投信「ticker ↔ 內部數字 ID」之完整對照表，目前僅各查得一筆範例（`00878→CN`、`00919→195`），尚未建立完整對照 | 開發人員（Phase 2 啟動時） | 待確認 |
+| 7（第二輪新增，第十輪／第十二輪全數解除） | ~~國泰投信「ticker ↔ `fc` 內部代碼」、群益投信「ticker ↔ 內部數字 ID」之完整對照表，目前僅各查得一筆範例（`00878→CN`、`00919→195`），尚未建立完整對照~~ | 開發人員（Phase 2 啟動時） | **已全數解決**：國泰（第十輪）`GetETFList?Keyword=` 端點可動態查詢取得；群益（第十二輪）`POST /CFWeb/api/etf/list` 同樣可動態查詢取得（已交叉驗證 `00919→195`、`00982A→399`）。兩者皆不需人工維護靜態對照表，Phase 2 啟動時 Adapter 直接呼叫清單端點即可 |
 | 8（第五輪更新） | 永豐投信是否存在可直接以 ticker 定位單一 ETF 的 PCF 端點 | 開發人員 | **已確認（第五輪）：存在，`https://sitc.sinopac.com/SinopacEtfs/Etfs/SinglePcf/{etf_id}`，已用 `00410A` 實測成功，靜態 HTML 完整表格＋日期，技術可行性高**（見 §一） |
 | 9（第五輪更新） | 安聯投信「ticker ↔ `etf-info` 內部代碼」完整對照表，且該頁面是否含成分股明細 | 開發人員 | **部分確認（第五輪）：頁面經查證為 JS 前端動態渲染（SPA），靜態請求無法取得任何實際內容（含成分股表格），完整對照表與底層資料 API 均待查明，可行性存疑**（見 §一） |
 | 10（第六輪更新） | 野村／統一／復華三家投信之 PCF 資料取得方式 | 開發人員 | **已確認（第六輪）：三家皆有可行的官方端點，取代第五輪「SPA／重導向錯誤」的悲觀判斷——野村 `POST /API/ETFAPI/api/Fund/GetFundTradeInfo`（`FundNo` 直接帶市場代碼，JSON 回應，🟢複雜度低）；復華 `GET /api/assets?fundID={fundID}`（`fundID` 為內部代碼，需對照表，JSON 回應，🟡複雜度中）；統一 `GET /ETF/Fund/AssetExcelNPOI?fundCode={fundCode}`（`fundCode` 為內部代碼，需對照表＋Cookie 工作階段，回傳結構化 Excel，🟡複雜度中）**（見 §一第六輪新增段落） |
-| 11（第五輪新增，第六輪維持） | **國泰投信官網對查證請求回應 `HTTP 403 Forbidden`**，需確認是否為固定的防爬蟲機制或僅為暫時性問題；若證實為長期性防護策略，在本專案「不偽裝成一般瀏覽器」的既定安全設計原則下，**國泰投信可能不具技術可行性**，需 Roy Chiang 決定是否仍投入 Phase 2 開發工時，或改列為不支援 | Roy Chiang／開發人員（**建議列為 Phase 2 啟動前第一項確認事項**） | 待確認（本輪未再複查國泰，優先度仍最高） |
+| 11（第五輪新增，第六輪維持，✅ 第十輪解除） | ~~國泰投信官網對查證請求回應 `HTTP 403 Forbidden`~~，需確認是否為固定的防爬蟲機制或僅為暫時性問題；若證實為長期性防護策略，在本專案「不偽裝成一般瀏覽器」的既定安全設計原則下，**國泰投信可能不具技術可行性**，需 Roy Chiang 決定是否仍投入 Phase 2 開發工時，或改列為不支援 | Roy Chiang／開發人員 | **已解除（第十輪）：403 Forbidden 為舊頁面 `funds/etf/pcf.aspx` 之現象，改用官方 API `cwapi.cathaysite.com.tw`（`GetETFList`／`GetETFDetailStockList`）皆 `HTTP 200` 正常回應，技術可行性確認無虞，國泰投信正式解除「可能不具技術可行性」疑慮，可安心排入 Phase 2 開發** |
 | 12（第六輪更新，✅ 已釐清） | ~~安聯、野村、中信三家投信是否存在可直接呼叫的底層 API~~ | 開發人員 | **已釐清（第六輪）：野村已確認有可行 API（見 #10）；中信已確認為 Imperva Incapsula WAF 防護，判定不具技術可行性（見下方 #15）；僅剩安聯尚未查得底層 API，維持待確認** |
 | 13（第五輪新增） | 街口投信網域 `etf.skit.com.tw` 查證時 DNS 查詢失敗 | — | **已確認（第六輪）：Roy Chiang 說明該投信目前標的與台股關連性低，非技術問題，決定不予排入，不再列為待查項目** |
 | 14（第六輪更新） | ~~中信投信 `.taipei` 網域憑證問題與 `.com.tw` 動態渲染~~ | 開發人員 | **已由更明確的發現取代，見下方 #15** |
 | 15（第六輪新增，⚠️ 結論性） | 中信投信 `AuthToken`／`ETFList`／`ETFHoldingWeight` 三段式 API：`AuthToken` 可正常取得 token，但後續呼叫一律回應「Token 無效或過期」，即使補上 Cookie 工作階段、`Referer`／`Origin`／`X-Requested-With` 標頭仍失敗；回應標頭確認網站受 **Imperva Incapsula 商用 WAF 防護** | Roy Chiang | **已確認（第六輪）：判定不具技術可行性，建議不再投入時間嘗試繞過（繞過商用 WAF 已超出本專案「輕量爬蟲、不偽裝瀏覽器」原則），中信投信正式排除於所有 Phase 之外** |
-| 16（第七輪更新） | ~~復華 `fundID`、統一 `fundCode` 之完整「市場代碼↔內部代碼」對照表尚未建立~~ | 開發人員 | **已確認（第七輪）：兩者皆已找到官方「ETF 列表頁」可直接爬取完整對照，取代人工逐筆建表**——復華 `GET /ETF/etf_list`（已取得約 20 餘筆完整對照，如 `00991A↔ETF23`、`00929↔ETF21`）；統一 `GET /ETF/Fund/Index`（已取得完整對照，如 `00981A↔49YTW`，且**更正第六輪錯誤**：`63YTW` 實為 `00403A` 非 `00981A`，見 §一）。是否採「Adapter 啟動時動態爬取列表建立對照」或「維持靜態設定檔手動維護」，留待 Phase 2/3 實際排入開發時設計決定 |
+| 16（第七輪更新，✅ 統一部分第十三輪解除） | ~~復華 `fundID`、統一 `fundCode` 之完整「市場代碼↔內部代碼」對照表尚未建立~~ | 開發人員 | **已確認（第七輪）：兩者皆已找到官方「ETF 列表頁」可直接爬取完整對照，取代人工逐筆建表**——復華 `GET /ETF/etf_list`（已取得約 20 餘筆完整對照，如 `00991A↔ETF23`、`00929↔ETF21`）；統一 `GET /ETF/Fund/Index`（已取得完整對照，如 `00981A↔49YTW`，且**更正第六輪錯誤**：`63YTW` 實為 `00403A` 非 `00981A`，見 §一）。**第十三輪補充：統一部分已定案採「Adapter 啟動時動態爬取 `Fund/Index` 建立對照」**（`UniPcfAdapter._resolve_fund_code()` 已實作，不維護靜態對照表）；復華因網站已改版（見 #22）暫緩，此設計決策留待復華重啟評估時比照辦理 |
 | 17（第六輪新增，第七輪部分解決） | ~~野村 `GetFundTradeInfo` 之 `Type`／`Keyword` 參數語意未驗證~~ | 開發人員 | **部分解決（第七輪）：已改用更單純的 `GetFundAssets` 端點（僅需 `FundID`＋`SearchDate` 兩個參數，無 `Type`/`Keyword` 語意疑慮），建議正式採用 `GetFundAssets` 而非 `GetFundTradeInfo` 作為野村持股資料來源，此項待確認事項可視為以「改用更簡單端點」解決，原 `GetFundTradeInfo` 之參數語意不再需要深究** |
 | 18（第七輪新增） | 野村 `GetFundList` 回傳結果含 `CFundType` 欄位（本次觀察到 `2`／`15`／`21`／`1043` 等數值），語意尚未完全確認（推測可能區分主動式 ETF／被動式 ETF／跨境 ETF／債券 ETF 等類型），若要用此欄位做自動化篩選需先確認完整對照表 | 開發人員 | 待確認 |
-| 19（第七輪新增） | 統一投信除 `AssetExcelNPOI`（Excel）外未查得獨立持股 JSON API；`Info` 頁面雖含持股表格但為 HTML，若日後改採直接解析 `Info` 頁面 HTML 而非下載解析 Excel，兩者取捨（Excel 較不受版面異動影響 vs HTML 較不需額外的 Excel 解析套件）留待實作階段決定 | 開發人員 | 待確認 |
+| 19（第七輪新增，✅ 第十三輪解除） | ~~統一投信除 `AssetExcelNPOI`（Excel）外未查得獨立持股 JSON API；`Info` 頁面雖含持股表格但為 HTML，若日後改採直接解析 `Info` 頁面 HTML 而非下載解析 Excel，兩者取捨（Excel 較不受版面異動影響 vs HTML 較不需額外的 Excel 解析套件）留待實作階段決定~~ | 開發人員 | **已確認（第十三輪）：正式採用 `AssetExcelNPOI`（Excel），新增 `openpyxl` 套件依賴解析（經 Roy Chiang 確認），理由是 Excel 版面比 HTML 穩定、不受頁面改版影響；`UniPcfAdapter` 已依此實作並開通** |
 | 20（第八輪提出，✅ 第九輪解除） | ~~`YuantaPcfAdapter` 最終解析策略：(a) 解析 `window.__NUXT__`、(b) 反查匯出excel端點、(c) 引入 Headless Browser~~ | Roy Chiang | **已確認（第九輪）：Roy Chiang 拍板採用方案 (a)——Python 以 `subprocess` 呼叫 Node.js 子行程（僅內建 `vm`／`fs` 模組，無 npm 套件相依）解析 `window.__NUXT__`，已用 `0050`／`0056` 驗證可靠；專案首次引入 Node.js 執行期相依，GitHub Actions `ubuntu-latest` 預設已內建，本機開發需自行安裝，見 §一環境規格** |
-| 21（第八輪新增） | 富邦／元大服務條款全文之法律判斷（robots.txt 與頁面關鍵字掃描已完成機器可查部分，見 #1），需 Roy Chiang 親自開啟以下連結過目：富邦 `https://www.fubon.com/asset-management/footer?type=privacy`；元大 `https://openweb.yuantafunds.com/privacy/`（第八輪從 `ETFService/GetService` API 查得） | Roy Chiang | 待確認（上線前需完成） |
+| 21（第八輪新增，✅ 第十一輪解除） | ~~富邦／元大服務條款全文之法律判斷（robots.txt 與頁面關鍵字掃描已完成機器可查部分，見 #1），需 Roy Chiang 親自開啟以下連結過目：富邦 `https://www.fubon.com/asset-management/footer?type=privacy`；元大 `https://openweb.yuantafunds.com/privacy/`（第八輪從 `ETFService/GetService` API 查得）~~ | Roy Chiang | **已解除（第十一輪）：第八輪附的兩個連結經覆核，性質其實是「隱私權聲明」而非「服務條款」（兩者不同——後者才是通常會出現「禁止自動化擷取」字樣的地方）。本輪以關鍵字（條款／聲明／Terms／Agreement）重新掃描元大／富邦首頁原始碼，**皆查無獨立的服務條款頁面**；同時補查國泰兩網域 `robots.txt`（`www.cathaysite.com.tw`／`cwapi.cathaysite.com.tw`），**皆不存在**（此為國泰開通時遺漏的查證，本輪補齊）。三家投信官網之 `robots.txt`／頁面關鍵字掃描皆未見明文禁止自動化擷取字樣，且查無可審閱之服務條款頁面，Roy Chiang 確認**以「已盡合理查證義務」定案，不構成阻塞**，Phase 1（元大／富邦）與已開通之國泰皆維持正常運作，無需回頭暫停** |
+| 22（第十三輪新增，⚠️ 阻塞性） | 復華投信官網已改版為 Vue.js SPA 架構，第六／七輪記錄的 `GET /api/assets?fundID=...` JSON 端點實測已失效（回傳首頁 HTML 而非資料），持股明細頁未見任何 SSR 內嵌狀態可取巧解析，純前端渲染 | Roy Chiang／開發人員（需以瀏覽器開發者工具重新查得新版底層 API，比照國泰/群益的模式） | 待確認（擱置，非本次阻塞項，但復華 Adapter 開發本身被此項阻塞） |
+| 23（第十三輪新增，✅ 已解除） | ~~SA 文件「解析健全性檢查機制」（成分股數量驟降/劇烈變化時標記警示）未實作；`main.py._classify_rebalance_events()` 在 ETF 當天無資料時會誤把 `[]` 當成「持股歸零」，把既有持股全部誤判成清倉事件~~ | 開發人員 | **已解除（第十三輪）：`Fetcher._is_holding_count_anomaly()` 已實作（跌幅 ≥50% 視為解析異常不寫入）；`main.py._classify_rebalance_events()` 已修正為 `curr_holdings` 為空時跳過比對，不產生事件。已用 8/17 真實資料重現原始問題（0050 誤判 50 檔清倉）並驗證修正後不再誤報，另補 `tests/test_main.py`／`tests/test_fetcher.py` 鎖住行為** |
 
 ---
 
@@ -703,16 +730,34 @@ sequenceDiagram
   - 元大 0050 PCF 頁（✅ 完整取回 50/50 筆持股）：`GET https://www.yuantaetfs.com/tradeInfo/pcf/0050`
   - 元大 0056 PCF 頁（✅ 交叉驗證，完整取回 50/50 筆持股，確認解法不限單一 ETF）：`GET https://www.yuantaetfs.com/tradeInfo/pcf/0056`
   - 驗證方式：Node.js `vm` 模組沙箱執行頁尾 `window.__NUXT__=(function(...){...})(...)` 運算式，讀取 `fetch[].pcfData.InKind.FundComposition`
+- 查證來源（第十輪，Roy Chiang 提供國泰投信官方 API 端點實測）：
+  - 國泰投信 ETF 代碼對照 API（✅ 實測成功，`Keyword=00878` 對應 `fundCode=CN`）：`GET https://cwapi.cathaysite.com.tw/api/ETF/GetETFList?FundType=&Keyword=00878&CurrentPage=1&PerPageCount=20&status=1`
+  - 國泰投信成分股明細 API（✅ 實測成功，`FundCode=CN&SearchDate=2026-08-11`）：`GET https://cwapi.cathaysite.com.tw/api/ETF/GetETFDetailStockList?FundCode=CN&SearchDate=2026-08-11&status=1`
+- 查證來源（第十二輪，Roy Chiang 提供群益投信官方 API 端點實測）：
+  - 群益投信 ETF 清單 API（✅ 實測成功，含 `00919→fundNo=195`、`00982A→fundNo=399` 完整對照）：`POST https://www.capitalfund.com.tw/CFWeb/api/etf/list`
+  - 群益投信成分股明細 API（✅ 實測成功，`fundId=195`，回傳 40 檔持股於 `data.stocks[]`）：`POST https://www.capitalfund.com.tw/CFWeb/api/etf/buyback`（Body：`{"fundId": "195", "date": "2026-08-11"}`）
+  - 非交易日行為驗證（✅ 週末日期回 `code:400`／`data:null`，非誤植前一日資料）：同上端點，`date=2026-08-15`／`2026-08-16`
+- 查證來源（第十三輪，統一投信端點複查／復華投信改版發現／健全性檢查與換倉比對 bug 實測）：
+  - 統一投信 Excel 匯出端點（✅ 複查仍可行，`fundCode=49YTW`，回傳 50 檔持股）：`GET https://www.ezmoney.com.tw/ETF/Fund/AssetExcelNPOI?fundCode=49YTW`
+  - 統一投信 ETF 列表頁（✅ 複查仍可行，含 `00981A↔49YTW` 對照）：`GET https://www.ezmoney.com.tw/ETF/Fund/Index`
+  - 復華投信持股 API（🔴 已失效，回傳首頁 HTML 非 JSON）：`GET https://www.fhtrust.com.tw/api/assets?fundID=ETF23&qDate=2026-08-14`
+  - 復華投信 ETF 列表頁（✅ 頁面仍在，但持股明細頁未見 SSR 內嵌狀態）：`GET https://www.fhtrust.com.tw/ETF/etf_list`、`GET https://www.fhtrust.com.tw/ETF/etf_detail/ETF23`
+  - 換倉誤報 bug 重現與驗證（0050 因元大頁面日期不符無資料，修正前誤產生 50 筆清倉事件；修正後正確跳過比對）：`main.py --date 2026-08-17 --dry-run`
 
 ---
 
-## 附註：Phase 1 實作就緒狀態（第九輪結論）
+## 附註：實作就緒狀態（第十三輪更新）
 
-截至第九輪，Phase 1（元大投信＋富邦投信）技術面待確認事項已全數清除：
+截至第十三輪，Phase 1（元大＋富邦）、Phase 2（國泰＋群益）皆已實作並開通，Phase 3 觀察名單中**統一投信提前實作並開通**：
 
 | Adapter | 資料來源 | 技術方案 | 狀態 |
 | :--- | :--- | :--- | :--- |
-| `YuantaPcfAdapter` | `tradeInfo/pcf/{etf_id}` | HTTP 取頁 ＋ Node.js 子行程解析 `window.__NUXT__`（見 §四） | ✅ 已定案，可實作 |
-| `FubonPcfAdapter` | `Trade/Assets.aspx?stkId={etf_id}&lan=TW` | HTTP 取頁 ＋ `BeautifulSoup` 解析「股票」區塊表格（見 §四） | ✅ 已定案，可實作 |
+| `YuantaPcfAdapter` | `tradeInfo/pcf/{etf_id}` | HTTP 取頁 ＋ Node.js 子行程解析 `window.__NUXT__`（見 §四） | ✅ 已實作並開通 |
+| `FubonPcfAdapter` | `Trade/Assets.aspx?stkId={etf_id}&lan=TW` | HTTP 取頁 ＋ `BeautifulSoup` 解析「股票」區塊表格（見 §四） | ✅ 已實作並開通 |
+| `CathayPcfAdapter` | `cwapi.cathaysite.com.tw/api/ETF/GetETFList`＋`GetETFDetailStockList` | HTTP JSON API，`fundCode` 動態查詢（見 §一第十輪） | ✅ 已實作並開通（`watchlist.json` 含 `00878`） |
+| `CapitalPcfAdapter` | `capitalfund.com.tw/CFWeb/api/etf/list`＋`buyback` | HTTP JSON API，`fundNo` 動態查詢，持股在 `data.stocks[]`（見 §一第十二輪） | ✅ 已實作並開通（`watchlist.json` 含 `00919`） |
+| `UniPcfAdapter` | `ezmoney.com.tw/ETF/Fund/Index`＋`AssetExcelNPOI` | HTTP＋Cookie Session，`fundCode` 動態查詢，回應為 Excel（`openpyxl` 解析，見 §一第十三輪） | ✅ 已實作並開通（`watchlist.json` 含 `00981A`） |
+| `FuhwaPcfAdapter` | ~~`fhtrust.com.tw/api/assets`~~ | 官網已改版為 Vue.js SPA，原 API 失效，需重新查證 | 🔴 阻塞中，未實作（見 §六 #22） |
+| `AllianzPcfAdapter` | `etf.allianzgi.com.tw/etf-info/{內部代碼}` | SPA，無底層 API | 🔴 阻塞中，未實作（可行性存疑，見 §六 #9／#12） |
 
-僅餘 §六 #1／#21「服務條款全文之人工法律判斷」尚待 Roy Chiang 親自過目——此項性質上屬於「上線前需完成」的合規檢查，而非「動工前」的技術阻塞項，**不影響開發人員依本文件 §二～§五 立即開始實作**。
+§六 #1／#21「服務條款全文之法律判斷」第十一輪已由 Roy Chiang 確認定案，不再是待辦項；§六 #23「解析健全性檢查機制」與其連帶發現的換倉比對誤報 bug 已於第十三輪解除，見上方異動歷程。**Phase 3 剩餘之復華、安聯投信因技術面阻塞（前者網站已改版、後者仍是 SPA），本次無法實作**，需有新的底層 API 線索才能重啟評估。

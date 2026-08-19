@@ -159,6 +159,11 @@ class ConfigLoader:
             return float(overrides[etf_id]["etf_rebalance_pct"])
         return float(self._thresholds["default"]["etf_rebalance_pct"])
 
+    def get_etf_holding_count_drop_pct_threshold(self) -> float:
+        """持股筆數較前一交易日驟降多少百分比時，視為投信網站改版造成的解析異常而非真實清倉；
+        選填欄位，未設定時預設 50%。"""
+        return float(self._thresholds.get("default", {}).get("etf_holding_drop_pct", 50.0))
+
     # --- 門檻：個股三大法人雙門檻（成交量佔比 / 市值分級金額） ---
     def get_volume_ratio_threshold(self) -> float:
         """回傳百分比數字（例如 15.0 代表 15%），比對時記得除以 100。"""

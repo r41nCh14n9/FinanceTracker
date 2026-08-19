@@ -16,23 +16,17 @@
     },
     "cathay": {
       "name": "國泰投信",
-      "isEnabled": false,
+      "isEnabled": true,
       "adapter": "CathayPcfAdapter",
-      "pcf_url_template": "https://www.cathaysite.com.tw/funds/etf/pcf.aspx?fc={issuer_internal_code}",
-      "etfs": ["00878"],
-      "issuer_internal_codes": {
-        "00878": "CN"
-      }
+      "pcf_url_template": "https://cwapi.cathaysite.com.tw/api/ETF/GetETFDetailStockList",
+      "etfs": ["00878"]
     },
     "capital": {
       "name": "群益投信",
-      "isEnabled": false,
+      "isEnabled": true,
       "adapter": "CapitalPcfAdapter",
-      "pcf_url_template": "https://www.capitalfund.com.tw/etf/product/detail/{issuer_internal_code}/buyback",
-      "etfs": ["00919", "00982A"],
-      "issuer_internal_codes": {
-        "00919": "195"
-      }
+      "pcf_url_template": "https://www.capitalfund.com.tw/CFWeb/api/etf/buyback",
+      "etfs": ["00919", "00982A"]
     },
     "nomura": {
       "name": "野村投信",
@@ -43,13 +37,10 @@
     },
     "uni": {
       "name": "統一投信",
-      "isEnabled": false,
+      "isEnabled": true,
       "adapter": "UniPcfAdapter",
-      "pcf_url_template": "https://www.ezmoney.com.tw/ETF/Fund/AssetExcelNPOI?fundCode={issuer_internal_code}",
-      "etfs": ["00981A"],
-      "issuer_internal_codes": {
-        "00981A": "49YTW"
-      }
+      "pcf_url_template": "https://www.ezmoney.com.tw/ETF/Fund/AssetExcelNPOI",
+      "etfs": ["00981A"]
     },
     "allianz": {
       "name": "安聯投信",

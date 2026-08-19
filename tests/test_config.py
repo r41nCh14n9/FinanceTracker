@@ -84,6 +84,24 @@ def test_exposes_institutional_tiered_and_market_thresholds(tmp_path):
     assert config.get_market_institutional_threshold("dealer") == 5_000_000_000
 
 
+def test_etf_holding_count_drop_pct_threshold_defaults_when_not_configured(tmp_path):
+    """thresholds.json 沒特別設定這個欄位（既有設定檔就是這樣）時，要有一個合理預設值，不是噴例外。"""
+    config_dir = _make_valid_config_dir(tmp_path)
+    config = ConfigLoader(config_dir=config_dir)
+
+    assert config.get_etf_holding_count_drop_pct_threshold() == 50.0
+
+
+def test_etf_holding_count_drop_pct_threshold_reads_configured_value(tmp_path):
+    config_dir = _make_valid_config_dir(tmp_path)
+    thresholds = json.loads((config_dir / "thresholds.json").read_text(encoding="utf-8"))
+    thresholds["default"]["etf_holding_drop_pct"] = 30.0
+    _write(config_dir / "thresholds.json", thresholds)
+    config = ConfigLoader(config_dir=config_dir)
+
+    assert config.get_etf_holding_count_drop_pct_threshold() == 30.0
+
+
 def test_broker_monitoring_enabled_when_flag_set(tmp_path):
     config_dir = _make_valid_config_dir(tmp_path)
     _write(config_dir / "broker_branches.json", {

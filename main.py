@@ -104,8 +104,14 @@ def _classify_rebalance_events(config: ConfigLoader, storage: SnapshotRepository
     classifier = RebalanceClassifier(config)
     events = []
     for etf_id in config.get_watchlist_etfs():
-        prev_holdings = storage.read_etf_holdings(prev_date, etf_id)
         curr_holdings = storage.read_etf_holdings(target_date, etf_id)
+        if not curr_holdings:
+            # 讀不到今天的持股檔案，代表這檔 ETF 今天沒抓到新資料（頁面尚未更新、解析失敗等），
+            # 不是「真的變成 0 檔」；直接拿空清單去跟前一天比對的話，每一檔既有持股都會被
+            # 誤判成「清倉」而整批推播出去，所以沒有新資料的當天直接跳過比對，不硬湊。
+            logger.info("%s 今日尚無持股資料，略過本次換倉比對", etf_id)
+            continue
+        prev_holdings = storage.read_etf_holdings(prev_date, etf_id)
         events.extend(classifier.classify(etf_id, target_date, prev_holdings, curr_holdings))
     return events
 

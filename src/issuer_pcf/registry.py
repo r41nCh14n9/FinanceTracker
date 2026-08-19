@@ -4,12 +4,18 @@
 from __future__ import annotations
 
 from src.issuer_pcf.base import IssuerPcfProvider
+from src.issuer_pcf.capital import CapitalPcfAdapter
+from src.issuer_pcf.cathay import CathayPcfAdapter
 from src.issuer_pcf.fubon import FubonPcfAdapter
 from src.issuer_pcf.nomura import NomuraPcfAdapter
+from src.issuer_pcf.uni import UniPcfAdapter
 from src.issuer_pcf.yuanta import YuantaPcfAdapter
 
 ADAPTER_REGISTRY: dict[str, type[IssuerPcfProvider]] = {
     "YuantaPcfAdapter": YuantaPcfAdapter,
     "FubonPcfAdapter": FubonPcfAdapter,
     "NomuraPcfAdapter": NomuraPcfAdapter,
+    "CathayPcfAdapter": CathayPcfAdapter,
+    "CapitalPcfAdapter": CapitalPcfAdapter,
+    "UniPcfAdapter": UniPcfAdapter,
 }
