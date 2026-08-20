@@ -1,0 +1,31 @@
+{
+  "snapshot_date": "2026-08-20",
+  "sources": {
+    "FINMIND_INSTITUTIONAL": {
+      "status": "OK",
+      "fetched_at": "2026-08-20T10:16:19.802858+00:00",
+      "error_message": null
+    },
+    "FINMIND_PRICE": {
+      "status": "OK",
+      "fetched_at": "2026-08-20T10:16:20.882285+00:00",
+      "error_message": null
+    },
+    "FINMIND_BALANCE_SHEET": {
+      "status": "OK",
+      "fetched_at": "2026-08-20T10:16:20.882441+00:00",
+      "error_message": null
+    },
+    "FINMIND_MARKET": {
+      "status": "OK",
+      "fetched_at": "2026-08-20T10:16:21.499460+00:00",
+      "error_message": null
+    },
+    "TWSE_PCF": {
+      "status": "ERROR",
+      "fetched_at": null,
+      "error_message": "HTTPSConnectionPool(host='www.twse.com.tw', port=443): Read timed out. (read timeout=30)"
+    }
+  },
+  "is_trading_day": true
+}
