@@ -41,18 +41,16 @@ _MAX_MESSAGES_PER_PUSH = 5
 # 收訊者數量增加或改用付費方案時，這個值需要重新評估。
 _MAX_MESSAGES_PER_DAY = 10
 
-_REPORT_FOOTER = "（本訊息由籌碼監控引擎自動產生，個股金額為估算值）"
-
 _MARKET_LABELS = {
     AlertTriggerType.MARKET_FOREIGN: "外資",
     AlertTriggerType.MARKET_TRUST: "投信",
     AlertTriggerType.MARKET_DEALER: "自營商",
 }
 
-_STOCK_TRIGGER_LABELS = {
-    AlertTriggerType.VOLUME_RATIO: "量能異常",
-    AlertTriggerType.TIERED_AMOUNT: "大額進出",
-    AlertTriggerType.VOLUME_AND_AMOUNT: "量能異常＋大額進出",
+_STOCK_TRIGGER_TAGS = {
+    AlertTriggerType.VOLUME_RATIO: ["量能"],
+    AlertTriggerType.TIERED_AMOUNT: ["大額"],
+    AlertTriggerType.VOLUME_AND_AMOUNT: ["量能", "大額"],
 }
 
 _TIER_LABELS = {
@@ -129,8 +127,6 @@ class MessageFormatter:
             lines = [page_header]
             for block in page_blocks:
                 lines.extend(block)
-            if page_num == total_pages:
-                lines.append(_REPORT_FOOTER)
             messages.append("\n".join(lines))
         return messages
 
@@ -143,7 +139,7 @@ class MessageFormatter:
             label = _MARKET_LABELS[alert.trigger_type]
             direction = "買超" if alert.estimated_amount > 0 else "賣超"
             amount_yi = abs(alert.estimated_amount) / 1e8
-            lines.append(f"  {label}單日{direction} {amount_yi:,.1f} 億元")
+            lines.append(f"  {label}{direction}{amount_yi:,.1f}億")
         return lines
 
     def _format_stock_alert_blocks(
@@ -160,28 +156,30 @@ class MessageFormatter:
             trade = trades_by_stock.get(alert.stock_id)
             if trade is None:
                 continue
-            label = _STOCK_TRIGGER_LABELS[alert.trigger_type]
-            block = [f"  {trade['stock_id']} {trade['stock_name']} [{label}]"]
-            block.extend(self._format_institutional_detail(trade, alert))
-            blocks.append(block)
+            blocks.append([self._format_stock_alert_line(trade, alert)])
         return blocks
 
     @staticmethod
-    def _format_institutional_detail(trade: dict, alert: InstitutionalAlert) -> list[str]:
+    def _format_stock_alert_line(trade: dict, alert: InstitutionalAlert) -> str:
+        tier_label = _TIER_LABELS.get(alert.market_cap_tier, "未知")
+        tags = [tier_label] + _STOCK_TRIGGER_TAGS[alert.trigger_type]
+
         foreign_net = (trade["foreign_investor_buy"] - trade["foreign_investor_sell"]) + trade["foreign_dealer_self_net"]
         trust_net = trade["investment_trust_buy"] - trade["investment_trust_sell"]
         dealer_net = trade["dealer_self_net"] + trade["dealer_hedging_net"]
-        lines = [
-            f"    外資 {foreign_net / _SHARES_PER_LOT:+,.0f} 張／"
-            f"投信 {trust_net / _SHARES_PER_LOT:+,.0f} 張／"
-            f"自營商 {dealer_net / _SHARES_PER_LOT:+,.0f} 張"
-        ]
+        breakdown = (
+            f"外 {foreign_net / _SHARES_PER_LOT:+,.0f} 張 / "
+            f"投 {trust_net / _SHARES_PER_LOT:+,.0f} 張 / "
+            f"自 {dealer_net / _SHARES_PER_LOT:+,.0f} 張"
+        )
+
+        amount_part = ""
         if alert.estimated_amount is not None:
             direction = "買超" if alert.estimated_amount > 0 else "賣超"
             amount_yi = abs(alert.estimated_amount) / 1e8
-            tier_label = _TIER_LABELS.get(alert.market_cap_tier, "未知")
-            lines.append(f"    估算金額：{direction} {amount_yi:,.1f} 億元（市值分級：{tier_label}）")
-        return lines
+            amount_part = f":{direction} {amount_yi:,.1f} 億元"
+
+        return f"  {trade['stock_id']} {trade['stock_name']} [{', '.join(tags)}]{amount_part} ({breakdown})"
 
     @staticmethod
     def _group_by_etf(events: list[RebalanceEvent]) -> dict[str, list[RebalanceEvent]]:

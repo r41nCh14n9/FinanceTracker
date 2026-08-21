@@ -32,7 +32,7 @@ SA 文件第六章列出多項「SD 階段待細化事項」，本文件為對�
 | **（第二輪）股本快取策略** | 以「財報季度」為快取有效性判斷基準：`data/reference/capital_stock/{stock_id}.json` 落地保存最近一次成功取得的股本與其財報 `date`；每次執行時比對是否已有「本季或最近可取得季度」的快取，命中則不重打 API，未命中才呼叫 `TaiwanStockBalanceSheet` | §二、§四 |
 | **（第二輪）面額換算假設** | 固定假設面額 10 元（`發行股數 = 股本 ÷ 10`）；現行監控股票（`2330`／`2454`）皆為面額 10 元普通股，本次不處理特殊面額個案，日後清單擴增遇特殊面額股票時另案處理 | §二、§四 |
 | **（第二輪）金額估算基準** | 採用**收盤價**（非成交均價）估算個股法人買賣超金額，與市值估算共用同一筆 `TaiwanStockPrice` 資料，實作最簡單 | §四 |
-| **（第二輪）差異化告警文案** | 個股觸發門檻 1 標示「［量能異常］」、門檻 2 標示「［大額進出］」、兩者皆觸發標示「［量能異常＋大額進出］」；大盤區塊僅列出當日**有觸發**的法人類別 | §四 |
+| **（第二輪）差異化告警文案** | 個股標籤改採 `[市值分級, 觸發原因...]` 標籤清單格式（半形中括號、逗號分隔），觸發門檻 1 標示 `量能`、門檻 2 標示 `大額`、兩者皆觸發則兩個標籤並列 `量能, 大額`；大盤區塊僅列出當日**有觸發**的法人類別；簡報不再附加免責文字頁尾（見§六第 7 項） | §四 |
 | **（第二輪）大盤區塊呈現順序** | 置於個股區塊**之前**（先看大盤總體氛圍，再看個股細節，由粗到細符合閱讀習慣） | §四 |
 | **（第二輪）`thresholds.json` schema 擴充方式** | 新增巢狀區塊 `institutional_tiered`（個股雙門檻）與 `market_institutional`（大盤門檻），與既有 `default`／`overrides` 平級，不修改既有鍵值語意 | §二 |
 
@@ -375,9 +375,9 @@ class AlertScope(str, Enum):
 
 # 🔴 第二輪新增：告警觸發類型，供 Notifier 顯示差異化文案
 class AlertTriggerType(str, Enum):
-    VOLUME_RATIO = "VOLUME_RATIO"        # 個股門檻1：佔成交量比例達標（顯示「［量能異常］」）
-    TIERED_AMOUNT = "TIERED_AMOUNT"      # 個股門檻2：市值分級金額達標（顯示「［大額進出］」）
-    VOLUME_AND_AMOUNT = "VOLUME_AND_AMOUNT"  # 個股門檻1+2 同時達標（顯示「［量能異常＋大額進出］」）
+    VOLUME_RATIO = "VOLUME_RATIO"        # 個股門檻1：佔成交量比例達標（標籤顯示 `量能`）
+    TIERED_AMOUNT = "TIERED_AMOUNT"      # 個股門檻2：市值分級金額達標（標籤顯示 `大額`）
+    VOLUME_AND_AMOUNT = "VOLUME_AND_AMOUNT"  # 個股門檻1+2 同時達標（標籤顯示 `量能, 大額`）
     MARKET_FOREIGN = "MARKET_FOREIGN"    # 大盤外資達標
     MARKET_TRUST = "MARKET_TRUST"        # 大盤投信達標
     MARKET_DEALER = "MARKET_DEALER"      # 大盤自營商達標
@@ -431,7 +431,7 @@ class MarketCapTier(str, Enum):
 | **FR-2.4（第二輪，市值分級判斷）** | 依 `institutional_tiered.market_cap_tiers` 設定歸類 `MarketCapTier` | `InstitutionalTieredFilter._classify_tier()`（🔴 新增） |
 | **FR-2.5（第二輪，個股雙門檻 OR 判斷，取代 FR-2.1）** | 門檻1：`abs(total_net) / trading_volume >= volume_ratio_pct`；門檻2：`abs(估算金額) >= 分級門檻`；OR 判斷，記錄 `AlertTriggerType` | `InstitutionalTieredFilter.filter_significant_trades()`（🔴 新增，取代 `InstitutionalFilter`） |
 | **FR-2.6（第二輪，大盤三法人各自判斷）** | 外資／投信／自營商各自與 `market_institutional.*` 門檻比較，各自獨立產生 `INSTITUTIONAL_ALERT`（`scope=MARKET`） | `MarketInstitutionalFilter.filter_significant_trades()`（🔴 新增） |
-| **FR-3.3（第二輪，差異化告警訊息，取代 FR-3.1 呈現邏輯）** | 個股區塊依 `AlertTriggerType` 標示「［量能異常］」/「［大額進出］」/「［量能異常＋大額進出］」；新增「◆ 大盤三大法人動態」區塊置於個股區塊之前，僅列出當日有觸發的法人類別 | `MessageFormatter._format_institutional_alerts()`、`_format_market_alerts()`（🔴 新增） |
+| **FR-3.3（第二輪，差異化告警訊息，取代 FR-3.1 呈現邏輯）** | 個股每檔一行 `{代碼} {名稱} [{市值分級}, {觸發原因...}]:{買/賣}超 {金額}億元 (外 ... / 投 ... / 自 ...)`，`AlertTriggerType` 對應標籤 `量能`／`大額`／`量能, 大額`；新增「◆ 大盤三大法人動態」區塊置於個股區塊之前，僅列出當日有觸發的法人類別；訊息不附加免責文字頁尾 | `MessageFormatter._format_stock_alert_line()`、`_format_market_alerts()`（🔴 新增） |
 
 ### 內部元件設計
 
@@ -660,7 +660,7 @@ sequenceDiagram
 | 4 | 分點功能停用後，`config/watchlist.json.brokers[]` 是否保留在設定檔內或先行清空 | Roy Chiang | **已確認，保留不清空**（見 §一） |
 | 5（第二輪新增） | 個股市值分級臨界點（1,000億/100億）與各項門檻金額（大盤200億/30億/50億、個股30億/5億/1億、成交量佔比15%）是否需要隨市場環境（如大盤指數位階、成交量長期趨勢）定期檢討調整，或視為長期固定值 | Roy Chiang（產品/維運面決策） | 待確認（非本次阻塞項，先以定案數值上線） |
 | 6（第二輪新增） | 股本快取失效後、`TaiwanStockBalanceSheet` 又暫時無法呼叫時，沿用「已過期舊快取」的期間長度是否需要上限（例如超過 2 季未更新則视为不可信，改為略過門檻2而非沿用） | 開發人員 | 待確認（本次先不設上限，僅記錄 WARNING） |
-| 7（第二輪新增） | 個股門檻2「大額進出」訊息內是否需要同時揭露「本次估算方式為股數×收盤價，非官方精確金額」的免責文字，或僅在文件層級註明即可 | Roy Chiang | 待確認 |
+| 7（第二輪新增） | ~~個股門檻2「大額進出」訊息內是否需要同時揭露「本次估算方式為股數×收盤價，非官方精確金額」的免責文字，或僅在文件層級註明即可~~ | ~~Roy Chiang~~ | **已確認，不在訊息內附加免責文字**（原頁尾「本訊息由籌碼監控引擎自動產生，個股金額為估算值」已移除），估算方式僅在本文件與 SA 文件層級註明 |
 
 ---
 

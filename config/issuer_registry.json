@@ -54,14 +54,10 @@
     },
     "fuhwa": {
       "name": "復華投信",
-      "isEnabled": false,
+      "isEnabled": true,
       "adapter": "FuhwaPcfAdapter",
-      "pcf_url_template": "https://www.fhtrust.com.tw/api/assets?fundID={issuer_internal_code}",
-      "etfs": ["00991A", "00929"],
-      "issuer_internal_codes": {
-        "00991A": "ETF23",
-        "00929": "ETF21"
-      }
+      "pcf_url_template": "https://www.fhtrust.com.tw/api/assets",
+      "etfs": ["00991A", "00929"]
     }
   }
 }

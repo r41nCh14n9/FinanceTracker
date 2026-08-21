@@ -52,9 +52,8 @@ def test_message_formatter_includes_market_stock_and_etf_sections():
     messages = formatter.format("2026-08-05", market_alerts, stock_alerts, institutional_trades, events)
     combined = "\n".join(messages)
 
-    assert "外資單日賣超 250.0 億元" in combined
-    assert "2330 台積電 [大額進出]" in combined
-    assert "市值分級：大型" in combined
+    assert "外資賣超250.0億" in combined
+    assert "2330 台積電 [大型, 大額]:賣超 8.0 億元" in combined
     assert "新建倉：3231 緯創" in combined
     assert "完全清倉：2408 南亞科" in combined
     assert "調倉加碼：2317 鴻海" in combined
@@ -113,7 +112,7 @@ def test_message_formatter_labels_volume_and_amount_trigger_together():
         )
     ]
     messages = formatter.format("2026-08-05", [], stock_alerts, [_institutional_trade()], [])
-    assert "量能異常＋大額進出" in "\n".join(messages)
+    assert "[大型, 量能, 大額]" in "\n".join(messages)
 
 
 class _FakeConfig:
