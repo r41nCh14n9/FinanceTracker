@@ -50,7 +50,8 @@ def run(target_date: str, dry_run: bool = False) -> bool:
         return False
 
     storage = SnapshotRepository()
-    meta = Fetcher(config, storage).fetch_all(target_date)
+    fetcher = Fetcher(config, storage)
+    meta = fetcher.fetch_all(target_date)
 
     if not meta.is_trading_day and not dry_run:
         # 非交易日（國定假日剛好落在平日）不會有任何有意義的資料，硬要推播只會是
@@ -62,7 +63,7 @@ def run(target_date: str, dry_run: bool = False) -> bool:
     market_alerts, stock_alerts, institutional_trades = _evaluate_institutional_alerts(config, storage, target_date)
     storage.write_institutional_alerts(target_date, market_alerts + stock_alerts)
 
-    rebalance_events = _classify_rebalance_events(config, storage, target_date)
+    rebalance_events = _classify_rebalance_events(config, storage, fetcher, target_date)
     storage.write_rebalance_events(target_date, rebalance_events)
 
     if dry_run:
@@ -95,10 +96,12 @@ def _evaluate_institutional_alerts(
     return market_alerts, stock_alerts, institutional_trades
 
 
-def _classify_rebalance_events(config: ConfigLoader, storage: SnapshotRepository, target_date: str) -> list:
-    prev_date = storage.find_previous_trading_day(target_date)
+def _classify_rebalance_events(
+    config: ConfigLoader, storage: SnapshotRepository, fetcher: Fetcher, target_date: str
+) -> list:
+    prev_date = fetcher.resolve_backfill_trading_day(target_date)
     if prev_date is None:
-        logger.info("找不到前一交易日快照（可能為首次執行），略過 ETF 換倉比對")
+        logger.info("%s 沒有可用的前一交易日資訊，略過 ETF 換倉比對（FETCH_ISSUER_PCF_NO_PREVIOUS_DAY）", target_date)
         return []
 
     classifier = RebalanceClassifier(config)
@@ -111,7 +114,16 @@ def _classify_rebalance_events(config: ConfigLoader, storage: SnapshotRepository
             # 誤判成「清倉」而整批推播出去，所以沒有新資料的當天直接跳過比對，不硬湊。
             logger.info("%s 今日尚無持股資料，略過本次換倉比對", etf_id)
             continue
-        prev_holdings = storage.read_etf_holdings(prev_date, etf_id)
+        prev_holdings = fetcher.ensure_etf_holdings(etf_id, prev_date)
+        if not prev_holdings:
+            # 不論成因是投信不支援回補、還是支援但這次查無資料，一律視為同一種結果：
+            # 沒有前一天資料可比，僅保留當日快照，不硬比出一批假的清倉/新建倉事件。
+            logger.info(
+                "%s 沒有 %s 的前一交易日持股資訊，僅保留當日快照，略過換倉比對"
+                "（FETCH_ISSUER_PCF_NO_PREVIOUS_DAY）",
+                etf_id, prev_date,
+            )
+            continue
         events.extend(classifier.classify(etf_id, target_date, prev_holdings, curr_holdings))
     return events
 

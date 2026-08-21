@@ -4,7 +4,7 @@
       "name": "元大投信",
       "isEnabled": true,
       "adapter": "YuantaPcfAdapter",
-      "pcf_url_template": "https://www.yuantaetfs.com/tradeInfo/pcf/{etf_id}",
+      "pcf_url_template": "https://etfapi.yuantaetfs.com/ectranslation/api/bridge?APIType=ETFAPI&CompanyName=YUANTAFUNDS&FuncId=PCF/Daily&AppName=ETF&Platform=ETF&ticker={etf_id}&date={date}",
       "etfs": ["0050", "0056", "00940"]
     },
     "fubon": {

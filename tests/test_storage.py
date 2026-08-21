@@ -41,6 +41,45 @@ def test_write_and_read_meta_roundtrip(tmp_path):
     assert loaded["sources"]["TWSE_PCF"]["status"] == "NO_DATA"
 
 
+def test_upsert_meta_source_merges_without_overwriting_other_sources(tmp_path):
+    repo = _make_repo(tmp_path)
+    repo.write_meta(DailySnapshotMeta(
+        snapshot_date="2026-07-29",
+        sources={"FINMIND_INSTITUTIONAL": SourceStatus(status=SnapshotStatus.OK)},
+        is_trading_day=False,
+    ))
+
+    repo.upsert_meta_source(
+        "2026-07-29", "ISSUER_PCF",
+        SourceStatus(status=SnapshotStatus.OK, fetched_at="2026-07-29T10:00:00+00:00"),
+        is_trading_day=True,
+    )
+
+    loaded = repo.read_meta("2026-07-29")
+    assert loaded["sources"]["FINMIND_INSTITUTIONAL"]["status"] == "OK"  # 既有來源狀態不受影響
+    assert loaded["sources"]["ISSUER_PCF"]["status"] == "OK"
+    assert loaded["is_trading_day"] is True
+
+
+def test_upsert_meta_source_does_not_downgrade_trading_day_flag(tmp_path):
+    repo = _make_repo(tmp_path)
+    repo.write_meta(DailySnapshotMeta("2026-07-29", {}, True))
+
+    repo.upsert_meta_source("2026-07-29", "ISSUER_PCF", SourceStatus(status=SnapshotStatus.NO_DATA), is_trading_day=False)
+
+    assert repo.read_meta("2026-07-29")["is_trading_day"] is True
+
+
+def test_upsert_meta_source_creates_meta_when_missing(tmp_path):
+    repo = _make_repo(tmp_path)
+
+    repo.upsert_meta_source("2026-07-29", "ISSUER_PCF", SourceStatus(status=SnapshotStatus.OK), is_trading_day=True)
+
+    loaded = repo.read_meta("2026-07-29")
+    assert loaded["sources"]["ISSUER_PCF"]["status"] == "OK"
+    assert loaded["is_trading_day"] is True
+
+
 def test_broker_trades_roundtrip(tmp_path):
     repo = _make_repo(tmp_path)
     records = [BrokerTradeRecord("2026-07-29", "2330", "台積電", "凱基-台北", 1500, 300, 1200)]

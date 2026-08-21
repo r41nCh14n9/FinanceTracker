@@ -1,6 +1,10 @@
 """野村投信 PCF 資料來源：跟元大／富邦不同，野村官方直接提供結構化 JSON API，不需要解析
 HTML、也不需要投信內部代碼，用市場代碼（ticker）當 FundID 查詢即可。回應內容把股票／期貨／
 現金保證金等資產分成好幾張表格，要抓的是 TableTitle 為「股票」那一張，其餘不是成分股持倉。
+
+SearchDate 這個查詢參數不是官方文件寫的，是實測發現有效，帶入非當日的日期也查得到對應
+資料，回應的 NavDate 會跟著變動；用 NavDate 跟查詢日期比對，兩者相符才採用，避免站方
+實際上忽略了這個參數卻還是照樣回傳最新一期。
 """
 from __future__ import annotations
 
@@ -19,8 +23,10 @@ _STOCK_TABLE_TITLE = "股票"
 
 
 class NomuraPcfAdapter(IssuerPcfProvider):
+    SUPPORTS_BACKFILL = True
+
     def fetch_holdings(self, etf_id: str, snapshot_date: str) -> list[dict]:
-        data = self._fetch_data(etf_id)
+        data = self._fetch_data(etf_id, snapshot_date)
 
         nav_date = data.get("FundAsset", {}).get("NavDate", "")
         if nav_date.replace("/", "-") != snapshot_date:
@@ -33,10 +39,10 @@ class NomuraPcfAdapter(IssuerPcfProvider):
         stock_table = self._find_stock_table(data.get("Table", []))
         return [self._to_holding(row) for row in stock_table.get("Rows", [])]
 
-    def _fetch_data(self, etf_id: str) -> dict:
+    def _fetch_data(self, etf_id: str, snapshot_date: str) -> dict:
         resp = requests.post(
             _API_URL,
-            json={"FundID": etf_id},
+            json={"FundID": etf_id, "SearchDate": snapshot_date},
             headers={"User-Agent": _USER_AGENT},
             timeout=_REQUEST_TIMEOUT_SECONDS,
         )

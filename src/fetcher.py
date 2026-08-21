@@ -10,6 +10,7 @@ dataset 名稱已知有誤且分點資料在 FinMind 免費層本來就拿不到
 """
 from __future__ import annotations
 
+import dataclasses
 import logging
 import re
 from datetime import datetime, timedelta, timezone
@@ -39,6 +40,7 @@ _REQUEST_TIMEOUT_SECONDS = 30
 _PAR_VALUE = 10  # 台股面額多為 10 元，估算發行股數＝股本 ÷ 面額
 _CAPITAL_STOCK_LOOKBACK_DAYS = 400  # 抓股本時往回查的天數，確保能撈到最近一次公告的財報
 _CAPITAL_STOCK_CACHE_TTL_DAYS = 90  # 股本快取視為新鮮的天數，季更新資料不需要每天重打 API
+_BACKFILL_LOOKBACK_DAYS_MAX = 10  # 本地完全無歷史快照時，逐日輕量確認交易日的回溯天數上限（涵蓋農曆春節等長假）
 
 # requests 的例外訊息預設會帶完整請求 URL，裡面含明文 token；一律先過濾掉再往外拋，
 # 避免這段訊息被存進 _meta.json 後又被排程流程 commit 進版控。
@@ -269,6 +271,80 @@ class Fetcher:
         )
         self._storage.write_meta(meta)
         return meta
+
+    def resolve_backfill_trading_day(self, target_date: str) -> str | None:
+        """找出 target_date 的前一個交易日，供換倉比對使用。本地快照掃得到就直接採用；
+        只有本地完全沒有任何歷史快照時（例如系統第一次真正執行、或前一天執行失敗未落地），
+        才逐日輕量呼叫 FinMind 確認候選日期是否為交易日，找到就停，避免無界地往前掃描。
+        """
+        prev_date = self._storage.find_previous_trading_day(target_date)
+        if prev_date is not None:
+            return prev_date
+        return self._probe_previous_trading_day(target_date)
+
+    def _probe_previous_trading_day(self, target_date: str) -> str | None:
+        watchlist_stocks = self._config.get_watchlist_stocks()
+        if not watchlist_stocks:
+            return None
+        probe_stock = watchlist_stocks[0]
+
+        candidate = datetime.fromisoformat(target_date).date()
+        for _ in range(_BACKFILL_LOOKBACK_DAYS_MAX):
+            candidate -= timedelta(days=1)
+            candidate_str = candidate.isoformat()
+            try:
+                rows = self._finmind_client.fetch_institutional_trades(candidate_str, [probe_stock])
+            except Exception as exc:  # noqa: BLE001 - 只是想確認是不是交易日，失敗就試下一天
+                logger.warning("回補時輕量確認交易日失敗（%s）：%s", candidate_str, exc)
+                continue
+            if rows:
+                return candidate_str
+
+        logger.warning(
+            "回補時逐日確認交易日已達上限（%d 天）仍找不到交易日，本次略過換倉比對"
+            "（FETCH_ISSUER_PCF_NO_PREVIOUS_DAY）",
+            _BACKFILL_LOOKBACK_DAYS_MAX,
+        )
+        return None
+
+    def ensure_etf_holdings(self, etf_id: str, prev_date: str) -> list[dict]:
+        """取得 etf_id 在 prev_date 這天的持股，供換倉比對使用。本地已有快照就直接讀；
+        沒有的話，只有在對應投信官網經查證可安全帶入查詢日期時，才即時多打一次請求補回。
+        不支援回補、補抓查無資料、逾時、或解析異常，一律回傳空清單，讓呼叫端當成
+        「這次沒有前一天資料可比」處理，不需要區分實際成因。
+        """
+        existing = self._storage.read_etf_holdings(prev_date, etf_id)
+        if existing:
+            return existing
+
+        provider = self._resolve_issuer_provider(etf_id)
+        if not provider.SUPPORTS_BACKFILL:
+            logger.info("%s 對應投信不支援查詢非當日資料，%s 這天沒有持股可比對", etf_id, prev_date)
+            return []
+
+        try:
+            raw_rows = provider.fetch_holdings(etf_id, prev_date)
+        except Exception as exc:  # noqa: BLE001 - 回補失敗不能拖累其他 ETF 或整體流程
+            logger.warning("回補 %s 於 %s 的持股失敗：%s", etf_id, prev_date, exc)
+            return []
+
+        if not raw_rows:
+            logger.info("%s 回補 %s 查無資料，這天沒有持股可比對", etf_id, prev_date)
+            return []
+
+        earlier_date = self._storage.find_previous_trading_day(prev_date)
+        if self._is_holding_count_anomaly(etf_id, earlier_date, len(raw_rows)):
+            logger.warning("%s 回補 %s 的持股筆數異常，判定為解析異常，這天沒有持股可比對", etf_id, prev_date)
+            return []
+
+        records = [self._to_etf_holding_record(prev_date, etf_id, row) for row in raw_rows]
+        self._storage.write_etf_holdings(prev_date, etf_id, records)
+        self._storage.upsert_meta_source(
+            prev_date, DataSourceKey.ISSUER_PCF,
+            SourceStatus(status=SnapshotStatus.OK, fetched_at=self._now()),
+            is_trading_day=True,
+        )
+        return [dataclasses.asdict(r) for r in records]
 
     def _fetch_institutional_trades(self, snapshot_date: str) -> SourceStatus:
         try:

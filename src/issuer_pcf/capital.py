@@ -20,6 +20,8 @@ _DETAIL_API_URL = "https://www.capitalfund.com.tw/CFWeb/api/etf/buyback"
 
 
 class CapitalPcfAdapter(IssuerPcfProvider):
+    SUPPORTS_BACKFILL = True
+
     def fetch_holdings(self, etf_id: str, snapshot_date: str) -> list[dict]:
         fund_id = self._resolve_fund_id(etf_id)
         data = self._fetch_buyback(fund_id, snapshot_date)

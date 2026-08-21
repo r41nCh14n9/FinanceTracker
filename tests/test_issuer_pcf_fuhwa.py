@@ -50,6 +50,10 @@ def _fake_get(list_payload=_LIST_PAYLOAD, asset_payload=_ASSET_PAYLOAD):
     return side_effect
 
 
+def test_supports_backfill_is_enabled():
+    assert FuhwaPcfAdapter.SUPPORTS_BACKFILL is True
+
+
 def test_fetch_holdings_resolves_fund_id_then_filters_stock_rows_only():
     """detail 陣列混了股票跟其他資產，只有 ftype=='股票' 那幾列才是持股。"""
     adapter = FuhwaPcfAdapter()
