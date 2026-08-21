@@ -2,7 +2,8 @@
   "default": {
     "broker_net_volume": 500,
     "institutional_net_volume": 500,
-    "etf_rebalance_pct": 10.0
+    "etf_rebalance_pct": 10.0,
+    "etf_holding_drop_pct": 50.0
   },
   "institutional_tiered": {
     "volume_ratio_pct": 15.0,

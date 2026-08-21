@@ -28,6 +28,8 @@ class ConfigLoader:
         self._recipients = self._load_json("recipients.json")
         self._broker_branches = self._load_json("broker_branches.json")
         self._watchlist = self._load_json("watchlist.json")
+        self._issuer_registry = self._load_json("issuer_registry.json")
+        self._etf_issuer_key = {}  # etf_id -> issuer 鍵，_validate() 時建好，查表用
         self._validate()
 
     def _load_json(self, filename: str) -> dict:
@@ -57,6 +59,34 @@ class ConfigLoader:
         for key in ("stocks", "brokers", "etfs"):
             if key not in self._watchlist:
                 raise ConfigError(f"watchlist.json 缺少 {key} 欄位")
+        self._validate_issuer_registry()
+
+    def _validate_issuer_registry(self) -> None:
+        if "issuers" not in self._issuer_registry:
+            raise ConfigError("issuer_registry.json 缺少 issuers 欄位")
+        issuers = self._issuer_registry["issuers"]
+
+        # 反查表：ETF 代碼 -> 投信鍵，同一檔 ETF 理論上只會屬於一家投信；
+        # 後面出現的重複只保留最後一筆，設定檔本身不會刻意這樣寫。
+        self._etf_issuer_key = {
+            etf_id: issuer_key
+            for issuer_key, issuer in issuers.items()
+            for etf_id in issuer.get("etfs", [])
+        }
+
+        for etf_id in self._watchlist["etfs"]:
+            issuer_key = self._etf_issuer_key.get(etf_id)
+            if issuer_key is None:
+                raise ConfigError(
+                    f"watchlist.etfs 內 '{etf_id}' 尚未受支援（issuer_registry.json 找不到對應投信），"
+                    "請確認代碼是否正確，或該投信是否已完成 Adapter 開發"
+                )
+            issuer = issuers[issuer_key]
+            if not issuer.get("isEnabled", False):
+                raise ConfigError(
+                    f"watchlist.etfs 內 '{etf_id}' 對應的投信「{issuer.get('name', issuer_key)}」"
+                    "目前未開放（isEnabled=false），請洽維運人員確認是否已完成開發並開通"
+                )
 
     def _validate_institutional_tiered(self) -> None:
         tiered = self._thresholds.get("institutional_tiered")
@@ -90,6 +120,31 @@ class ConfigLoader:
     def get_watchlist_etfs(self) -> list[str]:
         return list(self._watchlist["etfs"])
 
+    # --- ETF 發行投信對照（決定用哪個 Adapter、打哪個 URL） ---
+    def get_issuer_mapping(self, etf_id: str) -> dict:
+        issuer_key = self._etf_issuer_key[etf_id]
+        issuer = self._issuer_registry["issuers"][issuer_key]
+        mapping = {
+            "issuer": issuer_key,
+            "adapter": issuer["adapter"],
+            "pcf_url_template": issuer["pcf_url_template"],
+        }
+        internal_code = issuer.get("issuer_internal_codes", {}).get(etf_id)
+        if internal_code is not None:
+            mapping["issuer_internal_code"] = internal_code
+        return mapping
+
+    # --- 投信開放狀態（isEnabled feature flag）與可監控 ETF 清單 ---
+    def get_enabled_issuers(self) -> dict[str, dict]:
+        """回傳目前 isEnabled=true 的投信對照（鍵為投信代碼），供檢核或分流查詢使用。"""
+        issuers = self._issuer_registry["issuers"]
+        return {key: issuer for key, issuer in issuers.items() if issuer.get("isEnabled", False)}
+
+    def get_available_etfs_by_issuer(self, issuer_key: str) -> list[str]:
+        """回傳指定投信目前登記的 ETF 清單；投信代碼不存在時回傳空清單。"""
+        issuer = self._issuer_registry["issuers"].get(issuer_key)
+        return list(issuer["etfs"]) if issuer else []
+
     # --- 分點功能（保留但預設停用，設定於 broker_branches.json 頂層） ---
     def is_broker_monitoring_enabled(self) -> bool:
         return bool(self._broker_branches.get("enabled", False))
@@ -103,6 +158,11 @@ class ConfigLoader:
         if etf_id in overrides and "etf_rebalance_pct" in overrides[etf_id]:
             return float(overrides[etf_id]["etf_rebalance_pct"])
         return float(self._thresholds["default"]["etf_rebalance_pct"])
+
+    def get_etf_holding_count_drop_pct_threshold(self) -> float:
+        """持股筆數較前一交易日驟降多少百分比時，視為投信網站改版造成的解析異常而非真實清倉；
+        選填欄位，未設定時預設 50%。"""
+        return float(self._thresholds.get("default", {}).get("etf_holding_drop_pct", 50.0))
 
     # --- 門檻：個股三大法人雙門檻（成交量佔比 / 市值分級金額） ---
     def get_volume_ratio_threshold(self) -> float:

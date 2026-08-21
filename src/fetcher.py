@@ -17,6 +17,8 @@ from datetime import datetime, timedelta, timezone
 import requests
 
 from src.config import ConfigLoader
+from src.issuer_pcf.base import IssuerPcfProvider
+from src.issuer_pcf.registry import ADAPTER_REGISTRY
 from src.models import (
     BrokerTradeRecord,
     DailySnapshotMeta,
@@ -49,7 +51,7 @@ _TRADING_DAY_SOURCES = frozenset({
     DataSourceKey.FINMIND_PRICE,
     DataSourceKey.FINMIND_MARKET,
     DataSourceKey.FINMIND_BROKER,
-    DataSourceKey.TWSE_PCF,
+    DataSourceKey.ISSUER_PCF,
 })
 
 # TaiwanStockInstitutionalInvestorsBuySell / TaiwanStockTotalInstitutionalInvestors
@@ -230,33 +232,20 @@ class FinMindClient:
         }
 
 
-class TwsePcfClient:
-    """證交所 PCF API 的薄封裝，取得 ETF 當日成分股清單。"""
-
-    _BASE_URL = "https://www.twse.com.tw/rwd/zh/ETF/pcf"
-
-    def fetch_holdings(self, etf_id: str, snapshot_date: str) -> list[dict]:
-        resp = requests.get(
-            self._BASE_URL,
-            params={"stockNo": etf_id, "date": snapshot_date.replace("-", "")},
-            timeout=_REQUEST_TIMEOUT_SECONDS,
-        )
-        resp.raise_for_status()
-        return resp.json().get("data", [])
-
-
 class Fetcher:
     def __init__(
         self,
         config: ConfigLoader,
         storage: SnapshotRepository,
         finmind_client: FinMindClient | None = None,
-        twse_client: TwsePcfClient | None = None,
+        issuer_providers: dict[str, IssuerPcfProvider] | None = None,
     ):
         self._config = config
         self._storage = storage
         self._finmind_client = finmind_client or FinMindClient(config.get_env("FINMIND_TOKEN"))
-        self._twse_client = twse_client or TwsePcfClient()
+        # 依 ETF 代碼覆寫要用哪個 provider，主要給測試用假物件取代真正的爬蟲；
+        # 沒被覆寫的 ETF 一律依設定檔查 ADAPTER_REGISTRY 動態決定。
+        self._issuer_providers = issuer_providers or {}
 
     def fetch_all(self, snapshot_date: str) -> DailySnapshotMeta:
         sources: dict[str, SourceStatus] = {
@@ -264,7 +253,7 @@ class Fetcher:
             DataSourceKey.FINMIND_PRICE: self._fetch_stock_trading(snapshot_date),
             DataSourceKey.FINMIND_BALANCE_SHEET: self._fetch_capital_stock(snapshot_date),
             DataSourceKey.FINMIND_MARKET: self._fetch_market_institutional(snapshot_date),
-            DataSourceKey.TWSE_PCF: self._fetch_etf_holdings(snapshot_date),
+            DataSourceKey.ISSUER_PCF: self._fetch_etf_holdings(snapshot_date),
         }
         if self._config.is_broker_monitoring_enabled():
             sources[DataSourceKey.FINMIND_BROKER] = self._fetch_broker_trades(snapshot_date)
@@ -398,16 +387,21 @@ class Fetcher:
         return SourceStatus(status=SnapshotStatus.OK, fetched_at=self._now())
 
     def _fetch_etf_holdings(self, snapshot_date: str) -> SourceStatus:
+        prev_date = self._storage.find_previous_trading_day(snapshot_date)
         fetched_any = False
         last_error = None
         for etf_id in self._config.get_watchlist_etfs():
             try:
-                raw_rows = self._twse_client.fetch_holdings(etf_id, snapshot_date)
-            except Exception as exc:  # noqa: BLE001
-                logger.warning("證交所 PCF 抓取失敗（%s）：%s", etf_id, exc)
+                provider = self._resolve_issuer_provider(etf_id)
+                raw_rows = provider.fetch_holdings(etf_id, snapshot_date)
+            except Exception as exc:  # noqa: BLE001 - 單一投信失敗不能讓其他 ETF 抓不到
+                logger.warning("投信官網 PCF 抓取失敗（%s）：%s", etf_id, exc)
                 last_error = str(exc)
                 continue
             if not raw_rows:
+                continue
+            if self._is_holding_count_anomaly(etf_id, prev_date, len(raw_rows)):
+                last_error = f"{etf_id} 持股筆數異常驟降，判定為解析異常，本次不採用（FETCH_ISSUER_PCF_ANOMALY_DETECTED）"
                 continue
             records = [self._to_etf_holding_record(snapshot_date, etf_id, row) for row in raw_rows]
             self._storage.write_etf_holdings(snapshot_date, etf_id, records)
@@ -418,6 +412,40 @@ class Fetcher:
         if last_error:
             return SourceStatus(status=SnapshotStatus.ERROR, error_message=last_error)
         return SourceStatus(status=SnapshotStatus.NO_DATA)
+
+    def _is_holding_count_anomaly(self, etf_id: str, prev_date: str | None, curr_count: int) -> bool:
+        """投信網站局部改版時，Adapter 通常不會直接拋例外，而是靜靜解析出殘缺的持股清單
+        （例如原本 40 檔只剩 3 檔）。這種資料如果照樣存進快照，Analyzer 會把「消失的 37 檔」
+        當成真實的清倉事件推播出去，所以在寫入前先跟前一交易日的筆數比一下，跌幅太誇張就
+        視為解析異常、這次不採用，而不是照單全收。
+        """
+        if prev_date is None:
+            return False  # 沒有前一天快照可比對（例如剛加入監控的新 ETF），沒有基準就不誤判
+        try:
+            prev_count = len(self._storage.read_etf_holdings(prev_date, etf_id))
+        except ValueError:
+            # 前一天的快照檔案本身壞掉（JSON 格式異常）時沒有基準可比對，這只是一個健全性
+            # 檢查用的輔助讀取，不能讓它把整個 fetch_all() 都拖垮，直接視為沒有基準、不擋。
+            logger.warning("%s 前一交易日持股快照格式異常，健全性檢查本次略過比對", etf_id)
+            return False
+        if prev_count == 0:
+            return False
+        drop_pct = (prev_count - curr_count) / prev_count * 100
+        threshold = self._config.get_etf_holding_count_drop_pct_threshold()
+        if drop_pct < threshold:
+            return False
+        logger.warning(
+            "%s 持股筆數從 %d 檔驟降至 %d 檔（跌幅 %.1f%%，達異常門檻 %.1f%%），判定為解析異常，本次不採用",
+            etf_id, prev_count, curr_count, drop_pct, threshold,
+        )
+        return True
+
+    def _resolve_issuer_provider(self, etf_id: str) -> IssuerPcfProvider:
+        if etf_id in self._issuer_providers:
+            return self._issuer_providers[etf_id]
+        mapping = self._config.get_issuer_mapping(etf_id)
+        adapter_cls = ADAPTER_REGISTRY[mapping["adapter"]]
+        return adapter_cls()
 
     def _to_institutional_trade_record(self, row: dict) -> InstitutionalTradeRecord:
         return InstitutionalTradeRecord(

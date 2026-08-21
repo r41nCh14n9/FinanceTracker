@@ -50,7 +50,14 @@ def run(target_date: str, dry_run: bool = False) -> bool:
         return False
 
     storage = SnapshotRepository()
-    Fetcher(config, storage).fetch_all(target_date)
+    meta = Fetcher(config, storage).fetch_all(target_date)
+
+    if not meta.is_trading_day and not dry_run:
+        # 非交易日（國定假日剛好落在平日）不會有任何有意義的資料，硬要推播只會是
+        # 一則空洞的「無達門檻標的」，白白浪費 LINE 月配額；dry-run 不受此限，
+        # 方便開發時想預覽任何日期的簡報長相。
+        logger.info("%s 非交易日，略過分析與推播", target_date)
+        return True
 
     market_alerts, stock_alerts, institutional_trades = _evaluate_institutional_alerts(config, storage, target_date)
     storage.write_institutional_alerts(target_date, market_alerts + stock_alerts)
@@ -59,10 +66,12 @@ def run(target_date: str, dry_run: bool = False) -> bool:
     storage.write_rebalance_events(target_date, rebalance_events)
 
     if dry_run:
-        message = MessageFormatter().format(
+        messages = MessageFormatter().format(
             target_date, market_alerts, stock_alerts, institutional_trades, rebalance_events
         )
-        print(message)
+        for i, message in enumerate(messages, start=1):
+            print(f"========== 訊息 {i}/{len(messages)} ==========")
+            print(message)
         return True
 
     return Notifier(config, storage).notify(
@@ -95,8 +104,14 @@ def _classify_rebalance_events(config: ConfigLoader, storage: SnapshotRepository
     classifier = RebalanceClassifier(config)
     events = []
     for etf_id in config.get_watchlist_etfs():
-        prev_holdings = storage.read_etf_holdings(prev_date, etf_id)
         curr_holdings = storage.read_etf_holdings(target_date, etf_id)
+        if not curr_holdings:
+            # 讀不到今天的持股檔案，代表這檔 ETF 今天沒抓到新資料（頁面尚未更新、解析失敗等），
+            # 不是「真的變成 0 檔」；直接拿空清單去跟前一天比對的話，每一檔既有持股都會被
+            # 誤判成「清倉」而整批推播出去，所以沒有新資料的當天直接跳過比對，不硬湊。
+            logger.info("%s 今日尚無持股資料，略過本次換倉比對", etf_id)
+            continue
+        prev_holdings = storage.read_etf_holdings(prev_date, etf_id)
         events.extend(classifier.classify(etf_id, target_date, prev_holdings, curr_holdings))
     return events
 

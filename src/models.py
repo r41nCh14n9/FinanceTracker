@@ -31,7 +31,7 @@ class DataSourceKey(str, Enum):
     FINMIND_BALANCE_SHEET = "FINMIND_BALANCE_SHEET"
     FINMIND_MARKET = "FINMIND_MARKET"
     FINMIND_BROKER = "FINMIND_BROKER"
-    TWSE_PCF = "TWSE_PCF"
+    ISSUER_PCF = "ISSUER_PCF"
 
 
 class AlertScope(str, Enum):

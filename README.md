@@ -18,7 +18,7 @@ GitHub Actions Cron（週一~五 台灣 18:00）
         ▼
    main.py（進入點）
         │
-        ├─ Fetcher   → 呼叫 FinMind API / 證交所 PCF API，寫入當日快照
+        ├─ Fetcher   → 呼叫 FinMind API / 各投信官網 PCF 頁面，寫入當日快照
         ├─ Analyzer  → 門檻篩選 + 前後日持股比對，寫入分析結果
         └─ Notifier  → 組簡報文字，透過 LINE Messaging API 推播
         │
@@ -36,7 +36,13 @@ FinanceTracker/
 ├─ src/
 │  ├─ config.py                # ConfigLoader：讀取 config/*.json 與環境變數
 │  ├─ models.py                # 共用資料結構與列舉（SnapshotStatus / RebalanceEventType / SendStatus）
-│  ├─ fetcher.py                # Fetcher / FinMindClient / TwsePcfClient：抓取外部資料
+│  ├─ fetcher.py                # Fetcher / FinMindClient：抓取外部資料
+│  ├─ issuer_pcf/               # 各投信官網 PCF 頁面爬蟲，依 issuer_registry.json 動態選用
+│  │  ├─ base.py                # IssuerPcfProvider：共同介面
+│  │  ├─ yuanta.py              # YuantaPcfAdapter：解析頁面內嵌的 Nuxt SSR 狀態（需要 Node.js）
+│  │  ├─ fubon.py               # FubonPcfAdapter：BeautifulSoup 解析靜態表格
+│  │  ├─ registry.py            # ADAPTER_REGISTRY：adapter 鍵 → 類別對照
+│  │  └─ scripts/extract_nuxt_state.js  # Node 子行程，解析元大頁面的 window.__NUXT__ 狀態
 │  ├─ analyzer.py               # BrokerFilter / RebalanceClassifier：門檻篩選與換倉分類
 │  ├─ notifier.py               # MessageFormatter / LineClient / Notifier：簡報格式化與推播
 │  └─ storage.py                # SnapshotRepository：讀寫 data/ 下所有 JSON 檔案
@@ -44,7 +50,8 @@ FinanceTracker/
 │  ├─ thresholds.json           # 分點買賣超門檻、ETF 調倉幅度門檻（可依 ETF 代碼覆寫）
 │  ├─ recipients.json           # LINE 收訊 User/Group 名單
 │  ├─ broker_branches.json      # 分點代碼 ↔ 中文名稱對照表
-│  └─ watchlist.json            # 監控的股票代碼／分點名稱／ETF 代碼清單
+│  ├─ watchlist.json            # 監控的股票代碼／分點名稱／ETF 代碼清單
+│  └─ issuer_registry.json      # 投信登記表：isEnabled 開關 + 各投信可監控 ETF 清單 + Adapter/URL（受支援 ETF 的唯一真實來源）
 ├─ data/                        # 執行後自動產生，不需手動建立
 │  ├─ snapshots/{date}/         # 當日原始快照（_meta.json、broker_trades.json、etf_holdings/{etf_id}.json）
 │  └─ reports/{date}/           # 當日分析與推播結果（rebalance_events.json、notification_log.json）
@@ -58,6 +65,8 @@ FinanceTracker/
 ---
 
 ## 快速開始（本機開發）
+
+0. **需先安裝 Node.js**（任何版本皆可，只用到 `vm`／`fs` 內建模組，不需 `npm install`）：`YuantaPcfAdapter` 會以 `subprocess` 呼叫本機 `node` 指令解析元大投信頁面，確認 `node --version` 在 PATH 上可執行；GitHub Actions 已透過 `actions/setup-node` 自動安裝，本機開發需自行安裝一次。
 
 1. 建立虛擬環境並安裝套件：
 
@@ -121,5 +130,8 @@ FinanceTracker/
 
 ### 已知限制與待確認事項
 
-- 證交所 PCF API 於主動式 ETF 與被動式 ETF 的端點/欄位是否一致、FinMind 分點資料集實際欄位名稱，皆需在正式串接時對照官方文件核實（`src/fetcher.py` 目前為最佳猜測的欄位對應）。
-- 完整待確認事項清單見 [SD 文件第六章](docs/design/architecture/SD-籌碼監控推播引擎-系統設計書.md#六待確認事項)。
+- ETF PCF 資料來源已改為依投信官網逐一爬取（見 [SD-ETF換倉資料來源方案評估-投信官網爬蟲-系統設計書.md](docs/design/architecture/SD-ETF換倉資料來源方案評估-投信官網爬蟲-系統設計書.md)），目前僅完成 **Phase 1（元大投信、富邦投信）**；`config/issuer_registry.json` 即「目前受支援投信／ETF」的唯一真實來源，每個投信有 `isEnabled` 開關與各自的可監控 ETF 清單，`watchlist.json.etfs` 內若填入未登記或 `isEnabled=false` 投信底下的 ETF 代碼，啟動時會直接報錯中止（兩種情況錯誤訊息不同，方便判斷是「代碼打錯」還是「投信尚未開發完成」）。已登記但 `isEnabled=false` 的投信（國泰、群益、野村、統一、安聯、復華）目前都還沒有對應的 Adapter 程式碼，之後開發完成、註冊進 `ADAPTER_REGISTRY` 後才能把旗標打開。
+- 富邦 Adapter（`Trade/Assets.aspx`）目前沒有已驗證的交易日期欄位可比對，故不做「網站尚未更新」的防呆，會直接採用站方回傳的最新一筆資料。
+- FinMind 分點資料集實際欄位名稱仍需在正式串接時對照官方文件核實（`src/fetcher.py` 目前為最佳猜測的欄位對應）。
+- 兩份投信官網服務條款全文尚待人工法律審視（非技術阻塞項，上線前需完成）。
+- 完整待確認事項清單見 [SD-籌碼監控推播引擎-系統設計書.md 第六章](docs/design/architecture/SD-籌碼監控推播引擎-系統設計書.md#六待確認事項)。

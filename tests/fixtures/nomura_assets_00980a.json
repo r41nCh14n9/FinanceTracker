@@ -1,0 +1,144 @@
+{
+  "TotalPages": -1,
+  "TotalItems": 0,
+  "Entries": {
+    "FundID": "00980A",
+    "Data": {
+      "FundAsset": {
+        "Aum": "20516124476",
+        "Units": "813230000",
+        "Nav": "25.23",
+        "NavDate": "2026/08/13"
+      },
+      "Table": [
+        {
+          "TableTitle": "股票",
+          "Columns": [
+            {
+              "Name": "股票代號",
+              "TextAlign": "center"
+            },
+            {
+              "Name": "股票名稱",
+              "TextAlign": "center"
+            },
+            {
+              "Name": "股數",
+              "TextAlign": "center"
+            },
+            {
+              "Name": "權重(%)",
+              "TextAlign": "center"
+            }
+          ],
+          "Rows": [
+            [
+              "2330",
+              "台灣積體電路製造",
+              "663000",
+              "7.87"
+            ],
+            [
+              "2454",
+              "聯發科技",
+              "279000",
+              "5.75"
+            ],
+            [
+              "2059",
+              "川湖科技",
+              "91000",
+              "5.43"
+            ]
+          ],
+          "NavDate": "2026/08/13"
+        },
+        {
+          "TableTitle": "期貨",
+          "Columns": [
+            {
+              "Name": "期貨代碼",
+              "TextAlign": "center"
+            },
+            {
+              "Name": "期貨名稱",
+              "TextAlign": "center"
+            },
+            {
+              "Name": "口數",
+              "TextAlign": "center"
+            },
+            {
+              "Name": "權重(%)",
+              "TextAlign": "center"
+            }
+          ],
+          "Rows": [
+            [
+              "TX",
+              "台灣證交所加權股價指數",
+              "158",
+              "7.09"
+            ]
+          ],
+          "NavDate": "2026/08/13"
+        },
+        {
+          "TableTitle": "",
+          "Columns": [
+            {
+              "Name": "項目",
+              "TextAlign": "center"
+            },
+            {
+              "Name": "金額",
+              "TextAlign": "center"
+            },
+            {
+              "Name": "幣別",
+              "TextAlign": "center"
+            },
+            {
+              "Name": "金額(原幣)",
+              "TextAlign": "center"
+            }
+          ],
+          "Rows": [
+            [
+              "股票",
+              "TWD$17,946,982,781",
+              "TWD",
+              "17946982781"
+            ],
+            [
+              "期貨",
+              "TWD$1,454,390,000",
+              "TWD",
+              "1454390000"
+            ],
+            [
+              "現金",
+              "TWD$1,394,030,685",
+              "TWD",
+              "1394030685"
+            ],
+            [
+              "保證金",
+              "TWD$381,340,688",
+              "TWD",
+              "381340688"
+            ],
+            [
+              "應收(付)證券款",
+              "TWD$96,131,626",
+              "TWD",
+              "96131626"
+            ]
+          ],
+          "NavDate": "2026/08/13"
+        }
+      ],
+      "BondProperty": null
+    }
+  }
+}
