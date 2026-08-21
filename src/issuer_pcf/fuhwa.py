@@ -22,6 +22,8 @@ _STOCK_FTYPE = "股票"
 
 
 class FuhwaPcfAdapter(IssuerPcfProvider):
+    SUPPORTS_BACKFILL = True
+
     def fetch_holdings(self, etf_id: str, snapshot_date: str) -> list[dict]:
         fund_id = self._resolve_fund_id(etf_id)
         detail, holding_date = self._fetch_asset_detail(fund_id, snapshot_date)

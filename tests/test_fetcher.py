@@ -326,6 +326,122 @@ def test_fetch_etf_holdings_no_previous_snapshot_does_not_block_new_etf(tmp_path
     assert len(storage.read_etf_holdings("2026-08-05", "0050")) == 1
 
 
+def test_resolve_backfill_trading_day_prefers_local_snapshot(tmp_path):
+    storage = _make_repo(tmp_path)
+    storage.write_meta(_make_trading_day_meta("2026-08-14"))
+    finmind = _quiet_finmind()
+    fetcher = Fetcher(_FakeConfig(), storage, finmind_client=finmind, issuer_providers=_quiet_issuer_providers())
+
+    result = fetcher.resolve_backfill_trading_day("2026-08-17")
+
+    assert result == "2026-08-14"
+    finmind.fetch_institutional_trades.assert_not_called()
+
+
+def test_resolve_backfill_trading_day_probes_finmind_when_no_local_history(tmp_path):
+    storage = _make_repo(tmp_path)
+    finmind = _quiet_finmind()
+
+    def fake_fetch(trade_date, stock_ids):
+        # 模擬只有回溯 2 天那筆才有資料（例如前一天剛好是連假）
+        return [{"stock_id": stock_ids[0]}] if trade_date == "2026-08-15" else []
+
+    finmind.fetch_institutional_trades.side_effect = fake_fetch
+    fetcher = Fetcher(_FakeConfig(stocks=["2330"]), storage, finmind_client=finmind, issuer_providers=_quiet_issuer_providers())
+
+    result = fetcher.resolve_backfill_trading_day("2026-08-17")
+
+    assert result == "2026-08-15"
+
+
+def test_resolve_backfill_trading_day_returns_none_when_lookback_exhausted(tmp_path):
+    storage = _make_repo(tmp_path)
+    finmind = _quiet_finmind()  # 一律回傳空，模擬回溯上限內都找不到交易日
+    fetcher = Fetcher(_FakeConfig(), storage, finmind_client=finmind, issuer_providers=_quiet_issuer_providers())
+
+    result = fetcher.resolve_backfill_trading_day("2026-08-17")
+
+    assert result is None
+
+
+def test_ensure_etf_holdings_reads_local_snapshot_without_calling_provider(tmp_path):
+    storage = _make_repo(tmp_path)
+    storage.write_etf_holdings("2026-08-14", "0050", [_holding_record("2026-08-14", "2330", "台積電", 1000)])
+    provider = MagicMock(spec=IssuerPcfProvider)
+    fetcher = Fetcher(_FakeConfig(), storage, finmind_client=_quiet_finmind(), issuer_providers={"0050": provider})
+
+    result = fetcher.ensure_etf_holdings("0050", "2026-08-14")
+
+    assert result[0]["component_stock_id"] == "2330"
+    provider.fetch_holdings.assert_not_called()
+
+
+def test_ensure_etf_holdings_backfills_when_local_missing_and_adapter_supports(tmp_path):
+    storage = _make_repo(tmp_path)
+    provider = MagicMock(spec=IssuerPcfProvider)
+    provider.SUPPORTS_BACKFILL = True
+    provider.fetch_holdings.return_value = [
+        {"component_stock_id": "2330", "component_name": "台積電", "holding_shares": 1000}
+    ]
+    fetcher = Fetcher(_FakeConfig(), storage, finmind_client=_quiet_finmind(), issuer_providers={"0050": provider})
+
+    result = fetcher.ensure_etf_holdings("0050", "2026-08-14")
+
+    # 回傳形狀要跟 read_etf_holdings() 一致（含 snapshot_date/etf_id），呼叫端才不用區分
+    # 「本地讀到的」還是「即時回補的」持股資料
+    assert result == storage.read_etf_holdings("2026-08-14", "0050")
+    assert [r["component_stock_id"] for r in result] == ["2330"]
+    assert storage.read_etf_holdings("2026-08-14", "0050") != []
+    meta = storage.read_meta("2026-08-14")
+    assert meta["sources"]["ISSUER_PCF"]["status"] == "OK"
+    assert meta["is_trading_day"] is True
+
+
+def test_ensure_etf_holdings_skips_without_calling_provider_when_backfill_unsupported(tmp_path):
+    storage = _make_repo(tmp_path)
+    provider = MagicMock(spec=IssuerPcfProvider)
+    provider.SUPPORTS_BACKFILL = False
+    fetcher = Fetcher(_FakeConfig(), storage, finmind_client=_quiet_finmind(), issuer_providers={"0050": provider})
+
+    result = fetcher.ensure_etf_holdings("0050", "2026-08-14")
+
+    assert result == []
+    provider.fetch_holdings.assert_not_called()
+
+
+def test_ensure_etf_holdings_returns_empty_when_backfill_fetch_raises(tmp_path):
+    storage = _make_repo(tmp_path)
+    provider = MagicMock(spec=IssuerPcfProvider)
+    provider.SUPPORTS_BACKFILL = True
+    provider.fetch_holdings.side_effect = RuntimeError("simulated failure")
+    fetcher = Fetcher(_FakeConfig(), storage, finmind_client=_quiet_finmind(), issuer_providers={"0050": provider})
+
+    result = fetcher.ensure_etf_holdings("0050", "2026-08-14")
+
+    assert result == []
+
+
+def test_ensure_etf_holdings_rejects_anomalous_drop_from_earlier_day(tmp_path):
+    """回補到的資料如果比再前一天暴跌很多，視為解析異常，不採用、也不落地。"""
+    storage = _make_repo(tmp_path)
+    storage.write_meta(_make_trading_day_meta("2026-08-13"))
+    storage.write_etf_holdings(
+        "2026-08-13", "0050",
+        [_holding_record("2026-08-13", str(i), f"股票{i}", 1000) for i in range(40)],
+    )
+    provider = MagicMock(spec=IssuerPcfProvider)
+    provider.SUPPORTS_BACKFILL = True
+    provider.fetch_holdings.return_value = [
+        {"component_stock_id": "1", "component_name": "股票1", "holding_shares": 1000},
+    ]
+    fetcher = Fetcher(_FakeConfig(), storage, finmind_client=_quiet_finmind(), issuer_providers={"0050": provider})
+
+    result = fetcher.ensure_etf_holdings("0050", "2026-08-14")
+
+    assert result == []
+    assert storage.read_etf_holdings("2026-08-14", "0050") == []
+
+
 def test_get_masks_token_in_raised_exception_message():
     client = FinMindClient(token="SUPER-SECRET-TOKEN")
 

@@ -49,6 +49,10 @@ def _fake_post(list_payload=_LIST_PAYLOAD, buyback_payload=_BUYBACK_PAYLOAD):
     return side_effect
 
 
+def test_supports_backfill_is_enabled():
+    assert CapitalPcfAdapter.SUPPORTS_BACKFILL is True
+
+
 def test_fetch_holdings_resolves_fund_id_then_maps_stocks_block():
     adapter = CapitalPcfAdapter()
     with patch("src.issuer_pcf.capital.requests.post", side_effect=_fake_post()):

@@ -25,6 +25,11 @@
       "status": "ERROR",
       "fetched_at": null,
       "error_message": "Expecting value: line 1 column 1 (char 0)"
+    },
+    "ISSUER_PCF": {
+      "status": "OK",
+      "fetched_at": "2026-08-21T09:34:08.704512+00:00",
+      "error_message": null
     }
   },
   "is_trading_day": true

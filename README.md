@@ -39,10 +39,9 @@ FinanceTracker/
 │  ├─ fetcher.py                # Fetcher / FinMindClient：抓取外部資料
 │  ├─ issuer_pcf/               # 各投信官網 PCF 頁面爬蟲，依 issuer_registry.json 動態選用
 │  │  ├─ base.py                # IssuerPcfProvider：共同介面
-│  │  ├─ yuanta.py              # YuantaPcfAdapter：解析頁面內嵌的 Nuxt SSR 狀態（需要 Node.js）
+│  │  ├─ yuanta.py              # YuantaPcfAdapter：呼叫官方 PCF/Daily JSON API
 │  │  ├─ fubon.py               # FubonPcfAdapter：BeautifulSoup 解析靜態表格
-│  │  ├─ registry.py            # ADAPTER_REGISTRY：adapter 鍵 → 類別對照
-│  │  └─ scripts/extract_nuxt_state.js  # Node 子行程，解析元大頁面的 window.__NUXT__ 狀態
+│  │  └─ registry.py            # ADAPTER_REGISTRY：adapter 鍵 → 類別對照
 │  ├─ analyzer.py               # BrokerFilter / RebalanceClassifier：門檻篩選與換倉分類
 │  ├─ notifier.py               # MessageFormatter / LineClient / Notifier：簡報格式化與推播
 │  └─ storage.py                # SnapshotRepository：讀寫 data/ 下所有 JSON 檔案
@@ -65,8 +64,6 @@ FinanceTracker/
 ---
 
 ## 快速開始（本機開發）
-
-0. **需先安裝 Node.js**（任何版本皆可，只用到 `vm`／`fs` 內建模組，不需 `npm install`）：`YuantaPcfAdapter` 會以 `subprocess` 呼叫本機 `node` 指令解析元大投信頁面，確認 `node --version` 在 PATH 上可執行；GitHub Actions 已透過 `actions/setup-node` 自動安裝，本機開發需自行安裝一次。
 
 1. 建立虛擬環境並安裝套件：
 

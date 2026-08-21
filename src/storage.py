@@ -25,6 +25,7 @@ from src.models import (
     MarketInstitutionalRecord,
     NotificationLogEntry,
     RebalanceEvent,
+    SourceStatus,
     StockCapitalSnapshot,
     StockDailyTrading,
 )
@@ -73,6 +74,21 @@ class SnapshotRepository:
 
     def read_meta(self, snapshot_date: str) -> dict | None:
         return self._read_json(self._snapshot_dir(snapshot_date) / "_meta.json")
+
+    def upsert_meta_source(
+        self, snapshot_date: str, source_key: str, status: SourceStatus, is_trading_day: bool
+    ) -> None:
+        """只覆寫單一來源的狀態，其餘既有來源與欄位維持原樣後寫回；is_trading_day 只接受
+        從 False 轉成 True，不會因為某次局部更新就把已經確認過的交易日改回 False，也不會
+        在 _meta.json 還不存在時把整份 meta 憑空蓋掉，避免其他來源的既有狀態被抹掉。
+        """
+        path = self._snapshot_dir(snapshot_date) / "_meta.json"
+        existing = self._read_json(path) or {"snapshot_date": snapshot_date, "sources": {}, "is_trading_day": False}
+        existing.setdefault("sources", {})
+        existing["sources"][source_key] = dataclasses.asdict(status)
+        if is_trading_day:
+            existing["is_trading_day"] = True
+        self._write_json(path, existing)
 
     # --- BROKER_TRADE_RECORD（保留，分點功能停用期間不會有新資料寫入） ---
     def write_broker_trades(self, snapshot_date: str, records: list[BrokerTradeRecord]) -> None:

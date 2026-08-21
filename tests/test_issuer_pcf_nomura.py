@@ -35,6 +35,18 @@ def _fake_response(payload: dict):
     return resp
 
 
+def test_supports_backfill_is_enabled():
+    assert NomuraPcfAdapter.SUPPORTS_BACKFILL is True
+
+
+def test_fetch_holdings_sends_search_date_in_request_body():
+    adapter = NomuraPcfAdapter()
+    with patch("src.issuer_pcf.nomura.requests.post", return_value=_fake_response(_SAMPLE_PAYLOAD)) as mock_post:
+        adapter.fetch_holdings("00980A", "2026-08-13")
+
+    assert mock_post.call_args.kwargs["json"] == {"FundID": "00980A", "SearchDate": "2026-08-13"}
+
+
 def test_fetch_holdings_maps_fields_and_skips_non_stock_tables():
     adapter = NomuraPcfAdapter()
     with patch("src.issuer_pcf.nomura.requests.post", return_value=_fake_response(_SAMPLE_PAYLOAD)):

@@ -15,6 +15,12 @@
 | 輪次 | 內容摘要 |
 | :--- | :--- |
 | 第一輪 | 建立本文件。拆解「補跑 2026-07-28 通知漏了 ETF 換倉段落」之根因為兩個各自獨立、疊加發生的原因；設計「投信官網回補能力矩陣」與「就近一日回補（bounded backfill）」機制，讓「本地剛好缺前一交易日快照」的情境可自動補齊，同時明確劃出「深度歷史回補（如數週前）」不在本次範圍之界線 |
+| 第二輪 | 依 Roy Chiang 要求，將「查詢日期回補能力」矩陣（結論層級）往下展開至「實際呼叫哪支 API、日期參數怎麼帶」的實作層級：拆分「①清單／代碼解析 API」與「②持倉明細 API」逐家列出實際端點、日期參數帶法與可驗證欄位，並依「日期能不能帶入 / 帶入後能不能確認」重新歸納為 A（完全無法帶入）／B（帶入但無法確認）／C（可安全帶入且可驗證）三類 |
+| 第三輪 | Roy Chiang 於 2026-08-21 用 Postman 直接對野村官網 API 測試，額外帶入 body 欄位 `SearchDate: "2026-08-11"`（非今日）後證實回應 `NavDate` 精準對應，推翻本文件原判定「野村完全無法帶入日期」的結論；改判野村技術上與群益/復華同等級（分類由 A 改為 C），並同步更新矩陣、分類表、範圍界線說明、架構圖與 §四 內部元件設計（新增 `nomura.py` 異動項），§六 新增野村相關待確認事項（多日交叉驗證、非官方欄位穩定性風險） |
+| 第四輪 | 依 Roy Chiang 要求：①明確註記國泰 `fetch_holdings()` 對回傳內容**無條件信任**（沒有任何比對邏輯，只要 API 回傳非空陣列就直接當成查詢日期當天的持倉），同步更新矩陣、API 明細表、分類表 B、範圍界線說明；②新增「無法帶入日期是否等於 HTML 爬蟲」釐清小節，逐一拆解分類 A 三家（元大／富邦／統一）的實際技術手段，指出統一的持倉明細其實是 Excel 匯出檔而非 HTML，並重申回補能力的判準是「後端是否存在可帶日期參數的結構化查詢介面」，與技術手段是 HTML 或 API 無直接對應關係 |
+| 第五輪 | Roy Chiang 於 2026-08-21 用 Postman 發現元大另有一支現行程式碼未使用的官方 JSON API（`FuncId=PCF/Daily`，帶 `ticker`／`date` 查詢參數，已實測成功），回應結構與現行 Nuxt 狀態解析出的 `pcfData.InKind.FundComposition` 高度相似；因 `PCF.trandate` 是否存在於回應中尚未確認、且採用此 API 可能牽涉整支重構 `yuanta.py`（移除 Node.js 依賴），影響範圍大於野村的「加參數」量級，故新增獨立分類 D（技術上可能可行、待確認且待決策，非本次原始範圍），同步更新矩陣、API 明細表、分類表、HTML 爬蟲釐清小節、範圍界線說明，並於 §六 新增 3 項待確認事項（欄位存在性、重構範圍決策、API 穩定性與另一支 `GetLatestIndex` API 之適用性判斷） |
+| 第六輪 | Roy Chiang 提供 Postman 截圖確認 `PCF/Daily` 回應確實含 `PCF.trandate`（如 `"trandate": "20260817"`），解決第五輪待確認事項第 8 項；元大改判為分類 C（可安全回補，與群益/復華/野村同等級），但**是否要整支重構 `yuanta.py`** 之架構決策仍未定案，故分類表不再單獨保留 D 類，改在 C 類內以附註區分「異動量級小（群益/復華/野村）」與「異動量級大、待決策（元大）」；同步更新矩陣、API 明細表、範圍界線說明、HTML 爬蟲釐清小節，並於 §六 新增元大多日交叉驗證待確認事項 |
+| 第七輪 | 依 Roy Chiang 指示定案兩項設計：①**元大改採 API 架構**，`yuanta.py` 整支重寫為呼叫 `PCF/Daily` API，完全移除官網 HTML 頁面抓取與 Node.js 子行程解析 `__NUXT__` 狀態的機制（不做新舊兩套並存），連帶移除 `FETCH_ISSUER_PCF_NODE_UNAVAILABLE`／`NUXT_EXTRACT_ERROR` 錯誤碼、`SUPPORTS_BACKFILL` 覆寫為 `True`；②**統一「無前一交易日資訊」情境的對外處理**，將原本 `FETCH_ISSUER_PCF_BACKFILL_UNSUPPORTED`／`_NO_DATA`／`_LOOKUP_EXHAUSTED` 三個各自獨立的錯誤碼合併為單一 `FETCH_ISSUER_PCF_NO_PREVIOUS_DAY`，不論成因是「投信不支援回補」還是「支援但實際查無資料/逾時」，一律視為同一種結果——僅保留當日快照、不執行換倉比對，Log 訊息仍依成因分別記錄供人工排查，但下游不再區分處理分支；同步更新矩陣、分類表、架構圖、§四內部元件設計與業務邏輯、§五錯誤碼彙整與例外處理原則、§六待確認事項（新增測試檔案改寫項目），本輪為設計定案，後續進入 `/dev` 實作階段 |
 
 ### 與既有文件的關聯與範疇界定
 
@@ -58,13 +64,49 @@ scripts/run.sh 0 --date 2026-07-28
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | 群益 | `CapitalPcfAdapter` | ✅ `POST` body `date` | ✅ `data.pcf.date1` | **✅ 可以** | [capital.py:30](../../../src/issuer_pcf/capital.py#L30)；既有 SD 文件第十二輪已驗證日期語意正確對應查詢日期本身 |
 | 復華 | `FuhwaPcfAdapter` | ✅ query `qDate` | ✅ `fund.dDate` | **✅ 可以** | [fuhwa.py:52-66](../../../src/issuer_pcf/fuhwa.py#L52-L66)；既有 SD 文件第十四輪已用 8/19～8/20 兩個交易日交叉驗證 |
-| 元大 | `YuantaPcfAdapter` | ❌ 未送出 | 有（`pcfData.PCF.trandate`），但因未送出查詢日期，驗證恆等於「是否剛好等於官網當下最新一期」 | ❌ 不行（非技術缺陷，官網頁面本身只呈現當下最新一期） | [yuanta.py:36-47](../../../src/issuer_pcf/yuanta.py#L36-L47) |
+| 元大 | `YuantaPcfAdapter`（🔴 定案：整支重寫） | ✅ **改採官方 JSON API** `GET https://etfapi.yuantaetfs.com/ectranslation/api/bridge?...&FuncId=PCF/Daily&ticker={ticker}&date={yyyyMMdd}`，直接支援 `date` 查詢參數（已實測成功）；**原本呼叫的官網 HTML 頁面（無日期參數）不再使用** | ✅ **確認存在**：`PCF.trandate`（`yyyyMMdd`，2026-08-21 Postman 實測回應截圖已確認，如 `"trandate": "20260817"`），欄位語意與原本解析 Nuxt 狀態時使用的 `pcfData.PCF.trandate` 完全相同 | **✅ 可以（已定案，與群益/復華/野村同等級）**——2026-08-21 Roy Chiang 已指示採用此 API 取代現行 HTML／Node.js 實作，不再是「待決策」狀態，見 §四 | 2026-08-21 Postman 手動測試（含 `trandate` 欄位確認）；重寫後程式碼見 §四內部元件設計 |
 | 統一 | `UniPcfAdapter` | ❌ 未送出 | 同上（`sheet_date`），同上限制 | ❌ 不行 | [uni.py:31-41](../../../src/issuer_pcf/uni.py#L31-L41) |
-| 野村 | `NomuraPcfAdapter` | ❌ 未送出 | 同上（`NavDate`），同上限制 | ❌ 不行 | [nomura.py:22-31](../../../src/issuer_pcf/nomura.py#L22-L31) |
-| 國泰 | `CathayPcfAdapter` | ✅ query `SearchDate` | ❌ **無**（程式註解明載「沒有像元大那樣可信賴的交易日期欄位可以比對」，直接信任站方回傳內容） | **⚠️ 不安全，不可回補**——送了日期但無法驗證站方是否真的依日期回應，若實際上仍回傳「當下最新」卻誤標為查詢日期寫入快照，會产生錯誤的換倉比對基準且無法察覺 | [cathay.py:22-27](../../../src/issuer_pcf/cathay.py#L22-L27) |
+| 野村 | `NomuraPcfAdapter` | ⚠️ **現行程式碼未送出**，但 2026-08-21 由 Roy Chiang 用 Postman 直接對官網 API 測試，額外帶 body 欄位 `SearchDate: "2026-08-11"`（非今日）後，回應 `NavDate` 精準對應為 `2026/08/11`，證實官網 API 本身**支援**日期查詢，是 [nomura.py:37-42](../../../src/issuer_pcf/nomura.py#L37-L42) 沒有把這個參數串接進去，不是官網不支援 | ✅ `FundAsset.NavDate`，且已用非今日日期實測比對相符 | **✅ 可以（前提：需先改程式碼加入 `SearchDate` 參數）**——技術上與群益/復華同一等級，目前只差在程式碼尚未串接 | 2026-08-21 Postman 手動測試（見上方截圖／需求描述），現行程式碼見 [nomura.py:36-52](../../../src/issuer_pcf/nomura.py#L36-L52) |
+| 國泰 | `CathayPcfAdapter` | ✅ query `SearchDate` | ❌ **無**（程式註解明載「沒有像元大那樣可信賴的交易日期欄位可以比對」，直接信任站方回傳內容） | **⚠️ 不安全，不可回補**——`fetch_holdings()` 對回應內容**無條件信任**：只要 API 有回傳資料列，就直接視為「`SearchDate` 當天的持倉」寫入快照，沒有任何一行程式碼檢查過這批資料實際對應哪一天；若站方實際上忽略 `SearchDate` 仍回傳「當下最新」，程式完全無從察覺，會把最新一期的資料誤標成查詢日期寫入快照，产生錯誤的換倉比對基準 | [cathay.py:22-27](../../../src/issuer_pcf/cathay.py#L22-L27) |
 | 富邦 | `FubonPcfAdapter` | ❌ 未送出 | ❌ 無（程式註解明載「沒有像元大那樣可信賴的交易日期欄位可以比對，目前先直接採用站方回傳的最新一筆資料，不做日期防呆」） | **⚠️ 不安全，不可回補**，與國泰同理，且風險更高（連日期都沒送） | [fubon.py:26-32](../../../src/issuer_pcf/fubon.py#L26-L32) |
 
-**結論：** 7 家已開通投信中，只有**群益、復華**兩家同時具備「送出查詢日期」與「可驗證回傳內容確實對應該日期」兩個條件，可以安全地用於非今日的查詢；其餘 5 家在現有官網介面下，於本次設計範圍內**一律不嘗試**非今日查詢——元大／統一／野村是官網本身只呈現當下最新一期（送了日期也沒用）；國泰／富邦則是即使送了日期，也沒有能力驗證站方是否真的照辦，貿然拿來回補的風險是「安靜地把錯誤日期的資料寫進快照」，比查不到資料更危險，因此明確排除。
+**結論（2026-08-21 第二輪更新）：** 7 家已開通投信中，**群益、復華兩家程式碼已具備**「送出查詢日期」與「可驗證回傳內容確實對應該日期」兩個條件，可直接安全用於非今日查詢；**野村官網 API 經實測同樣具備這兩個條件**，但現行程式碼尚未把 `SearchDate` 參數串接進去，屬於「技術上可行、待補程式碼」而非「技術限制」，須在 §四 補一項程式異動才能實際啟用；元大／統一在現有官網介面下**確實無日期參數可用**（送了也沒用），於本次設計範圍內一律不嘗試非今日查詢；國泰／富邦則是即使送了日期，也沒有能力驗證站方是否真的照辦，貿然拿來回補的風險是「安靜地把錯誤日期的資料寫進快照」，比查不到資料更危險，因此明確排除。
+
+### API 呼叫明細展開：清單解析 API × 持倉明細 API（本次新增，回應「實際打哪支 API、日期怎麼帶」的提問）
+
+上方矩陣是結論層級的判斷；每家投信實際上都是**兩支 API 接力呼叫**才拿到成分股清單——第一支負責把「市場代碼（如 `00919`）」換成投信內部代碼（`fundNo`／`fundCode`／`fundID`），第二支才是真正查詢成分股/PCF 明細。**這兩支 API 是否需要日期、能不能帶日期，是各自獨立的問題**：清單解析 API 查的是「這檔 ETF 對應哪個內部代碼」，這件事本身不隨日期變動，因此 7 家清單解析 API **全部都不需要、也沒有日期參數**；差異只發生在第二支「持倉明細 API」。以下逐家展開：
+
+| 投信 | ①清單／代碼解析 API | ②持倉／PCF 明細 API | ②日期參數 | ②有無帶入 `snapshot_date` | ②回傳可驗證日期欄位 | 驗證結果 |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 元大 | 無獨立清單 API，`etf_id` 直接當路徑參數（現行 HTML 路徑）；**新發現的 JSON API 同樣不需要清單解析**，`ticker` 直接當 query 參數 | **現行實作：** `GET https://www.yuantaetfs.com/tradeInfo/pcf/{etf_id}`（HTML 頁面，需再解析 `__NUXT__` 狀態）——頁面本身**無任何日期查詢參數可帶**。**2026-08-21 新發現：** `GET https://etfapi.yuantaetfs.com/ectranslation/api/bridge?APIType=ETFAPI&CompanyName=YUANTAFUNDS&FuncId=PCF/Daily&AppName=ETF&Platform=ETF&ticker={ticker}&date={date}`，官方 JSON API，**有** `date` 查詢參數（已實測回傳成功） | 現行 HTML 路徑無日期參數；新發現 API 為 Query String `date`（`yyyyMMdd`，與現行 `trandate` 比對格式一致） | 現行實作 ❌ 完全無法帶入；新發現 API ✅ **可以帶入**（現行程式碼尚未使用這支 API） | ✅ **確認存在**：回應含 `PCF.trandate`（如 `"trandate": "20260817"`，2026-08-21 Postman 實測截圖已確認）與 `InKind.FundComposition`（`stkcd`/`name`/`qty`），結構與現行 Nuxt 狀態解出的 `pcfData` 完全一致 | 現行 HTML 路徑：只能「事後比對」，頁面固定回傳官網當下最新一期，`trandate` 恰好等於目標日期才視為有效（[yuanta.py:41-47](../../../src/issuer_pcf/yuanta.py#L41-L47)）。**新發現 API**：✅ 日期參數與可驗證欄位均已確認存在，技術上與群益/復華/野村同等級可安全回補；**唯一未定案的是要不要整支取代現行 Node.js 解析機制**（或僅在回補路徑使用），屬於待 Roy Chiang 決策的較大範圍異動，見 §六 |
+| 富邦 | 無獨立清單 API，`etf_id` 直接當 querystring | `GET https://websys.fsit.com.tw/FubonETF/Trade/Assets.aspx?stkId={etf_id}&lan=TW`（HTML 表格） | 頁面**無日期查詢參數可帶** | ❌ 完全無法帶入 | **無**，頁面本身不含任何交易日期欄位 | 連「事後比對」都做不到，程式註解明載「沒有像元大那樣可信賴的交易日期欄位可以比對」，一律直接採用站方回傳內容，是 7 家中日期防呆最弱的一家（[fubon.py:26-32](../../../src/issuer_pcf/fubon.py#L26-L32)） |
+| 國泰 | `GET https://cwapi.cathaysite.com.tw/api/ETF/GetETFList?Keyword={etf_id}&...` → 取回 `fundCode` | `GET https://cwapi.cathaysite.com.tw/api/ETF/GetETFDetailStockList?FundCode={fundCode}&SearchDate={snapshot_date}&status=1` | Query String `SearchDate`（`yyyy-MM-dd`） | ✅ **有帶入** | **無**，回應內容不含任何日期欄位可交叉核對 | ⚠️ **無條件信任**：帶了日期，但 [cathay.py:53-62](../../../src/issuer_pcf/cathay.py#L53-L62) 的 `_fetch_detail()` 只要 API 回傳非空陣列就直接採用，`fetch_holdings()` 完全沒有比對步驟，等同「只要有回應就當作是查詢日期當天的持倉」，是 7 家中**唯一送了日期卻連驗證邏輯都沒寫**的投信（元大/野村/統一好歹有事後比對，只是沒送日期） |
+| 群益 | `POST https://www.capitalfund.com.tw/CFWeb/api/etf/list`（無 body） → 取回 `fundNo` | `POST https://www.capitalfund.com.tw/CFWeb/api/etf/buyback`，JSON body `{"fundId": fund_id, "date": snapshot_date}` | JSON body 欄位 `date`（`yyyy-MM-dd`） | ✅ 有帶入 | 有：`data.pcf.date1`，與帶入的 `date` 同格式 | ✅ 程式直接比對 `pcf.date1 == snapshot_date`，不符即視為空清單，驗證邏輯完整（[capital.py:23-37](../../../src/issuer_pcf/capital.py#L23-L37)） |
+| 野村 | 無獨立清單 API，市場代碼直接當 `FundID` | `POST https://www.nomurafunds.com.tw/API/ETFAPI/api/Fund/GetFundAssets`，JSON body 現行程式碼只帶 `{"FundID": etf_id}` | JSON body 欄位 `SearchDate`（`yyyy-MM-dd`）——**官網 API 實際支援，但現行程式碼未帶入** | ⚠️ **可以帶，程式碼目前沒帶**（2026-08-21 Postman 實測：加帶 `"SearchDate": "2026-08-11"` 後，回應精準對應） | 有：`FundAsset.NavDate`（`yyyy/MM/dd`），實測已與帶入的 `SearchDate` 相符 | ✅ 技術上可驗證（比照群益/復華同等級），但**現行程式碼尚未串接** `SearchDate`，需先改 [nomura.py:37-42](../../../src/issuer_pcf/nomura.py#L37-L42) 加入該參數並補上比對邏輯，才能讓 `NomuraPcfAdapter` 真正具備回補能力 |
+| 統一 | 先 `GET` 首頁取 Session Cookie，再 `GET https://www.ezmoney.com.tw/ETF/Fund/Index` 解析 HTML 超連結 `fundCode=` 取得內部代碼 | `GET https://www.ezmoney.com.tw/ETF/Fund/AssetExcelNPOI?fundCode={fund_code}`（回傳 Excel 檔） | **無日期查詢參數可帶**，Excel 內容本身是站方當下匯出的固定快照 | ❌ 完全無法帶入 | 有：Excel 表頭民國年日期字串（如 `115/08/14`），程式换算為西元年後比對 | 同元大，只能事後比對，且多一層「先建 Session 再下載」的額外步驟，跟日期回補能力無關但屬於呼叫鏈的一環（[uni.py:66-82](../../../src/issuer_pcf/uni.py#L66-L82)） |
+| 復華 | `GET https://www.fhtrust.com.tw/api/fundList`（無需參數） → 取回 `fundID` | `GET https://www.fhtrust.com.tw/api/assets?fundID={fund_id}&qDate={snapshot_date}` | Query String `qDate`，**限定 `yyyy/MM/dd` 斜線格式**（帶連字號格式站方不報錯，只默默回官網首頁 HTML，容易誤判成端點失效） | ✅ 有帶入（程式已處理格式轉換：`snapshot_date.replace("-", "/")`） | 有：`fund.dDate`，換算回連字號格式後與 `snapshot_date` 比對 | ✅ 驗證邏輯完整，與群益同為唯二可安全回補的投信（[fuhwa.py:51-67](../../../src/issuer_pcf/fuhwa.py#L51-L67)） |
+
+**依「日期能不能帶入 / 帶入後能不能確認」重新分組，共三類：**
+
+| 分類 | 投信 | 說明 |
+| :--- | :--- | :--- |
+| **A. 持倉明細 API 完全沒有日期參數可帶**（官網介面設計本身只回傳當下最新一期，不是程式漏寫） | 富邦、統一（2 家） | 富邦連事後比對都做不到；統一雖回應內容附一個日期欄位可事後比對，本質上是「碰運氣」而非「查詢」 |
+| **B. 持倉明細 API 有日期參數可帶，但帶入後無法確認站方是否真的照辦**（回應內容缺乏可交叉核對的日期欄位） | 國泰（1 家） | 唯一「送了日期、卻驗不了」的投信；程式碼**無條件信任**回應內容就是 `SearchDate` 當天的持倉，`fetch_holdings()` 沒有任何比對邏輯——只要 API 回傳非空陣列就直接採用，若站方實際上忽略 `SearchDate` 仍回傳最新一期，程式完全無從察覺 |
+| **C. 持倉明細 API 有日期參數，且回應內容可交叉驗證確實對應該日期** | 群益、復華（程式碼已串接）／野村（官網 API 已驗證支援，程式碼尚未串接，需加參數＋加比對）／**元大**（2026-08-21 新發現官方 JSON API `PCF/Daily`，`date` 參數與 `PCF.trandate` 驗證欄位均已實測確認存在，**已定案採用、取代現行 HTML／Node.js 實作**）（共 5 家） | 群益、復華現行程式碼已直接可用；野村需在既有 `nomura.py` 加參數＋加比對（異動量級小）；**元大異動量級最大但已定案**：整支重寫 `yuanta.py`，移除 HTML／Node.js 解析機制，改呼叫 `PCF/Daily` API，見 §四 |
+
+**額外補充：清單解析 API 這一側完全不受「查詢日期」影響**——無論哪一類，7 家的清單/代碼解析 API（如國泰 `GetETFList`、群益 `etf/list`、復華 `fundList`）都只查「市場代碼 → 投信內部代碼」的靜態對應關係，沒有、也不需要日期參數；元大／富邦／野村甚至連獨立的清單解析 API 都沒有（市場代碼直接當路徑或 body 參數用；元大新發現的 `PCF/Daily` API 同樣是 `ticker` 直接當查詢參數，不需要清單解析），因此回補能力的瓶頸**全部落在第二支「持倉明細 API」**，這也是為什麼上方矩陣只針對持倉明細 API 分析，而不需要對清單解析 API 另外評估。
+
+### 「無法帶入日期」是否等於「用 HTML 爬蟲」？（釐清技術機制與回補能力的對應關係）
+
+不完全等於。分類 A 的 2 家（富邦、統一）持倉明細這一步確實**沒有結構化查詢 API 可用**，但底層技術手段其實有兩種，不能一概而論為「HTML 爬蟲」；元大原本也屬於這個技術模式，但 2026-08-21 已發現例外——站方另有一支現行程式碼未使用的官方 JSON API（已改列入上方分類 C，見矩陣），故獨立列出、不併入本表：
+
+| 投信 | 持倉明細資料的實際技術手段 | 是不是「HTML 爬蟲」 | 為什麼（現行實作）沒有日期參數 |
+| :--- | :--- | :--- | :--- |
+| 富邦 | 下載 `.aspx` 伺服器端渲染 HTML，用 BeautifulSoup 直接解析表格 `<table>` | ✅ 是，最傳統意義上的 HTML 爬蟲 | 頁面只呈現當下最新一期，且完全沒有可信賴日期欄位可比對 |
+| 統一 | 持倉明細**不是** HTML，而是呼叫 `AssetExcelNPOI` 端點直接下載一份 Excel（`.xlsx`）匯出檔，用 `openpyxl` 讀取；但**清單解析步驟**（找 `fundCode`）確實是先 `GET` 一個 HTML 頁面、用 BeautifulSoup 解析超連結 | ⚠️ **一半一半**——清單解析步驟是 HTML 爬蟲，持倉明細本體其實是「檔案匯出」而非網頁 | 匯出端點只接受 `fundCode`，不接受日期參數，回傳的永遠是站方當下匯出時點的最新快照 |
+| 元大（僅指**現行**呼叫的 HTML 頁面，不含新發現的 `PCF/Daily` API） | 下載整頁 HTML，解析內嵌的 `__NUXT__` 前端狀態（伺服器端渲染框架的資料快取） | ✅ 是，且是最複雜的一種——頁面本身是動態框架渲染，要另外呼叫 Node.js 子行程解析 | 現行呼叫的**這個頁面**沒有日期參數；站方另有一支獨立 JSON API（`PCF/Daily`）已確認支援 `date` 參數且可驗證，只是現行程式碼還沒有改用它，見上方分類 C |
+
+**結論：** 你的判斷方向正確——這 3 家確實都因為「沒有結構化的日期查詢 API」而無法回補，但精確地說是「**沒有可帶日期參數的持倉查詢介面**」（無論背後是 HTML 頁面還是 Excel 匯出檔），而不是嚴格意義上「都是 HTML 爬蟲」；統一的持倉明細其實是檔案下載，只有查代碼那一步用到 HTML 解析。反過來看，這也印證了本文件的分類邏輯與「用什麼技術手段」無關，只跟「後端是否存在一支支援日期查詢的結構化 API」有關——國泰／群益／野村／復華 4 家全部都是有後端 JSON API 的，差別只在於 API 本身有沒有日期參數、以及程式有沒有驗證回傳內容確實對應該日期。
 
 ---
 
@@ -84,9 +126,9 @@ scripts/run.sh 0 --date 2026-07-28
 
 三個各自獨立、疊加在一起的限制，任一項不解決都無法達成任意日期回補：
 
-1. **官網本身只揭露當下最新一期（元大／統一／野村）**：這 3 家 Adapter 目前的請求根本沒有帶入日期參數，官網頁面設計上就只呈現「最新一期」，不是程式碼可以繞過的限制。
-2. **官網保留天數未知且未被授權探測（群益／復華）**：既有 SD 文件的查證僅驗證過近 1～2 個交易日內可查詢成功，並未（也不建議）反覆嘗試「這家投信 PCF 資料到底能往前查幾天」——這類探測本身即是額外的爬蟲負擔，且官網行為可能隨時調整，不應該寫死一個未經授權驗證的天數上限。
-3. **國泰／富邦無法驗證站方是否誠實回應查詢日期**：即使技術上「送出去試試看」，也沒有辦法確認拿回來的資料究竟是不是查詢日期當天的資料，貿然採用的風險高於直接判定為不支援。
+1. **現行呼叫的頁面/端點只揭露當下最新一期（富邦／統一，元大現行實作亦同）**：這幾家 Adapter 目前的請求根本沒有帶入日期參數，就其**目前實際呼叫的頁面/端點**而言，設計上就只呈現「最新一期」，不是程式碼可以繞過的限制。（野村、元大原本也歸在此類，但 2026-08-21 已分別實測發現例外：野村官網 API、元大另一支獨立 `PCF/Daily` API，皆已確認支援日期查詢且可驗證，改列入「查詢日期回補能力」矩陣 C 類；差別只在異動量級——野村只需在既有 Adapter 加參數，元大則因為新 API 與現行 HTML 路徑是完全不同的實作，是否整支重構仍待 Roy Chiang 決策，見 §六。）
+2. **官網保留天數未知且未被授權探測（群益／復華，野村／元大比照辦理）**：既有 SD 文件的查證僅驗證過近 1～2 個交易日內可查詢成功，並未（也不建議）反覆嘗試「這家投信 PCF 資料到底能往前查幾天」——這類探測本身即是額外的爬蟲負擔，且官網行為可能隨時調整，不應該寫死一個未經授權驗證的天數上限。
+3. **國泰／富邦無法驗證站方是否誠實回應查詢日期**：國泰現行程式碼雖有送出 `SearchDate`，但對回傳內容**無條件信任**，沒有任何比對邏輯；富邦則連日期都沒送。兩者共通點是「拿回來的資料究竟是不是查詢日期當天的資料，沒有辦法確認」，貿然採用的風險高於直接判定為不支援。
 
 若未來確有「補跑數週前歷史換倉比對」的明確需求，建議另立文件評估「改用具備真正歷史存檔的資料來源」（如 SD-ETF換倉資料來源方案評估文件已提及的證交所集中保管所或付費資料商管道），不應以「拉長本機制的回補天數」硬解，那只會讓上述第 2、3 點的風險被放大。
 
@@ -111,13 +153,15 @@ flowchart TD
     subgraph IssuerPkg["src/issuer_pcf/（🟡 修改）"]
         BASE["IssuerPcfProvider.SUPPORTS_BACKFILL\n🔴 新增 class 屬性，預設 False"]
         SAFE["群益 CapitalPcfAdapter\n復華 FuhwaPcfAdapter\nSUPPORTS_BACKFILL = True 🔴"]
-        UNSAFE["元大／統一／野村／國泰／富邦\n維持預設 False 🟢（不動，僅新增屬性宣告）"]
+        NOMURA["野村 NomuraPcfAdapter\n🔴 新增 SearchDate 參數＋比對邏輯\nSUPPORTS_BACKFILL = True 🔴\n（2026-08-21 實測確認官網支援）"]
+        YUANTA["元大 YuantaPcfAdapter\n🔴 整支重寫：改呼叫 PCF/Daily API\n移除 HTML／Node.js 解析\nSUPPORTS_BACKFILL = True 🔴"]
+        UNSAFE["統一／國泰／富邦\n維持預設 False 🟢（不動，僅新增屬性宣告）"]
     end
 
     STORE["SnapshotRepository\n🟡 修改：新增 upsert_meta_source()"]
     FINMIND["FinMindClient\n🟢 不動，本地無歷史快照時\n供輕量交易日確認之用"]
     FS[("本機檔案系統\ndata/snapshots/")]
-    SITES["群益／復華官網 PCF 端點\n🟢 端點不動，僅多一次呼叫時機"]
+    SITES["群益／復華／野村官網 PCF 端點（不動）\n＋元大 PCF/Daily API（🔴 新採用端點）\n野村多帶 SearchDate 參數"]
 
     CRON --> ENTRY
     ENTRY --> CLASSIFY
@@ -127,9 +171,15 @@ flowchart TD
     CLASSIFY -->|2.逐ETF取前一天持股| ENSURE
     ENSURE -->|本地已有直接讀取| STORE
     ENSURE -->|本地沒有且 SUPPORTS_BACKFILL=True| SAFE
-    ENSURE -.SUPPORTS_BACKFILL=False 直接略過.-> UNSAFE
+    ENSURE -->|本地沒有且 SUPPORTS_BACKFILL=True| NOMURA
+    ENSURE -->|本地沒有且 SUPPORTS_BACKFILL=True| YUANTA
+    ENSURE -.SUPPORTS_BACKFILL=False 或實際查無資料 一律視為「無前一交易日資訊」直接略過.-> UNSAFE
     SAFE --> SITES
+    NOMURA --> SITES
+    YUANTA --> SITES
     SAFE -->|成功則落地| STORE
+    NOMURA -->|成功則落地| STORE
+    YUANTA -->|成功則落地| STORE
     STORE --> FS
     ENSURE -.回傳結果.-> CLASSIFY
 ```
@@ -211,7 +261,9 @@ flowchart LR
 | 前一交易日解析改為「本地優先、必要時輕量確認」 | 本地已有交易日快照直接採用；本地完全無歷史快照時，逐日（最多 `_BACKFILL_LOOKBACK_DAYS_MAX` 天）呼叫 FinMind 三大法人資料集，任何一天有回傳資料列即視為交易日，藉此在不觸發完整 `fetch_all()` 的情況下確認候選日期是否為交易日 | `Fetcher.resolve_backfill_trading_day()`（🔴 新增），取代 `main.py` 直接呼叫 `storage.find_previous_trading_day()` 後即放棄的行為 |
 | 前一交易日 ETF 持股改為「本地優先、有條件即時回補」 | 本地已有該 ETF 該日快照直接讀取；本地沒有時，僅當該 ETF 對應投信 `SUPPORTS_BACKFILL=True`，才呼叫既有 `IssuerPcfProvider.fetch_holdings()` 即時補抓，並沿用既有 `_is_holding_count_anomaly()` 健全性檢查、成功後落地存檔＋局部更新 `_meta.json`；不支援或補抓仍失敗時回傳空清單 | `Fetcher.ensure_etf_holdings()`（🔴 新增） |
 | 換倉比對呼叫端改為使用回補結果 | `main.py._classify_rebalance_events()` 改為呼叫上述兩個新方法取得前一交易日與前一天持股，而非直接依賴本地既有快照是否存在 | `main.py._classify_rebalance_events()`（🟡 修改，需接收 `Fetcher` 實例；`main.py.run()` 內建立的 `Fetcher` 物件需保留供此處重複使用，而非用完即棄） |
-| 回補能力宣告 | 各 `IssuerPcfProvider` 子類別以類別屬性宣告「是否可安全回補非今日資料」，見「問題重現與根因拆解」之矩陣 | `IssuerPcfProvider.SUPPORTS_BACKFILL: ClassVar[bool] = False`（🔴 新增，基底類別預設值）；`CapitalPcfAdapter.SUPPORTS_BACKFILL = True`／`FuhwaPcfAdapter.SUPPORTS_BACKFILL = True`（🔴 新增覆寫），其餘 5 個 Adapter 不覆寫、維持預設 `False` |
+| 回補能力宣告 | 各 `IssuerPcfProvider` 子類別以類別屬性宣告「是否可安全回補非今日資料」，見「問題重現與根因拆解」之矩陣 | `IssuerPcfProvider.SUPPORTS_BACKFILL: ClassVar[bool] = False`（🔴 新增，基底類別預設值）；`CapitalPcfAdapter.SUPPORTS_BACKFILL = True`／`FuhwaPcfAdapter.SUPPORTS_BACKFILL = True`（🔴 新增覆寫，程式碼本已具備日期參數與驗證邏輯）；`NomuraPcfAdapter.SUPPORTS_BACKFILL = True`（🔴 新增覆寫，**前提是同步完成下方 `nomura.py` 的 `SearchDate` 串接與驗證邏輯，兩者需同一次異動一起做，不可只加屬性不改抓取邏輯**，否則會宣告支援回補卻實際仍抓到最新一期）；`YuantaPcfAdapter.SUPPORTS_BACKFILL = True`（🔴 新增覆寫，**前提是完成下方 `yuanta.py` 整支重寫**，改採 `PCF/Daily` API，見下方內部元件設計），其餘 3 個 Adapter（統一／國泰／富邦）不覆寫、維持預設 `False` |
+| **元大改採官方 API，移除 HTML／Node.js 解析機制**（2026-08-21 依 Roy Chiang 指示定案） | 不再抓官網頁面 HTML、不再啟動 Node.js 子行程解析 `__NUXT__` 狀態；改為直接呼叫 `GET https://etfapi.yuantaetfs.com/ectranslation/api/bridge?...&FuncId=PCF/Daily&ticker={etf_id}&date={snapshot_date}`，並比對回應 `PCF.trandate` 是否等於查詢日期，不符則視為當日尚未更新（回傳空清單），語意與現行其餘 JSON API Adapter（群益/復華/野村）一致 | `src/issuer_pcf/yuanta.py`（🔴 整支重寫，見下方內部元件設計） |
+| 「無前一交易日資訊」情境統一處理 | 不論成因是「該 ETF 對應投信不支援回補」還是「支援回補但實際查無資料／逾時／解析異常」，一律視為同一種結果：**該 ETF 本次沒有前一交易日持股可供比對**，僅保留當日快照，`RebalanceClassifier` 不執行比對、不產生任何 `RebalanceEvent`；不同成因仍分別記錄不同的 Log 訊息供人工排查，但**不再區分出多種對外可見的錯誤碼／處理分支**，簡化為單一結果狀態 | `Fetcher.ensure_etf_holdings()`（🔴 新增，內部依成因記錄不同 Log 文字，但統一回傳空清單這一種結果） |
 | `_meta.json` 局部更新 | 回補成功時只更新 `sources.ISSUER_PCF` 與 `is_trading_day`（僅允許轉為 `True`），不影響同一天其餘來源既有狀態 | `SnapshotRepository.upsert_meta_source()`（🔴 新增） |
 
 ### 內部元件設計
@@ -221,6 +273,8 @@ flowchart LR
 | `src/issuer_pcf/base.py`（`IssuerPcfProvider`） | 新增 `SUPPORTS_BACKFILL: ClassVar[bool] = False` 類別屬性，並於 docstring 補充「唯有同時具備『送出查詢日期』與『回傳內容可驗證日期』兩條件才可覆寫為 True」之判準 | 🟡 修改 |
 | `src/issuer_pcf/capital.py`（`CapitalPcfAdapter`） | 新增 `SUPPORTS_BACKFILL = True` | 🟡 修改 |
 | `src/issuer_pcf/fuhwa.py`（`FuhwaPcfAdapter`） | 新增 `SUPPORTS_BACKFILL = True` | 🟡 修改 |
+| `src/issuer_pcf/nomura.py`（`NomuraPcfAdapter`） | **新增範圍（2026-08-21 實測後追加）：** ①請求 body 加入 `"SearchDate": snapshot_date`；②比照群益/復華，比對回傳 `FundAsset.NavDate`（`yyyy/MM/dd`）換算後是否等於 `snapshot_date`，不符則視為當日尚未更新（回傳空清單）；③新增 `SUPPORTS_BACKFILL = True` | 🟡 修改（比群益/復華多了①②兩步，因為現行程式碼完全沒有日期比對邏輯，需要新寫，不是只加一行屬性） |
+| `src/issuer_pcf/yuanta.py`（`YuantaPcfAdapter`） | **整支重寫（2026-08-21 依 Roy Chiang 指示定案，取代原「新增分類 D、待決策」的暫定狀態）：** ①移除 `_fetch_html`／`_extract_nuxt_state`／`_find_pcf_data` 與 `subprocess.run(["node", ...])` 呼叫、暫存檔處理；②改為 `GET https://etfapi.yuantaetfs.com/ectranslation/api/bridge`，Query String 帶 `APIType=ETFAPI&CompanyName=YUANTAFUNDS&FuncId=PCF/Daily&AppName=ETF&Platform=ETF&ticker={etf_id}&date={snapshot_date 轉 yyyyMMdd}`；③比對回應 `PCF.trandate` 是否等於查詢日期，不符則回傳空清單（沿用既有「當日尚未更新」語意）；④解析 `InKind.FundComposition` 為持股清單（欄位 `stkcd`/`name`/`qty`，與現行輸出格式相同，`_to_etf_holding_record()` 等下游轉換不需異動）；⑤新增 `SUPPORTS_BACKFILL = True`；⑥`truststore.inject_into_ssl()` 是否仍需保留待實作時視新網域（`etfapi.yuantaetfs.com`）憑證鏈是否有相同問題而定，若無問題可移除 | 🔴 重寫（連帶影響：`src/issuer_pcf/scripts/extract_nuxt_state.js` 不再被呼叫，可移除；`tests/test_issuer_pcf_yuanta.py`／`tests/test_issuer_pcf_yuanta_integration.py`／`tests/fixtures/yuanta_pcf_0050.html` 需同步改寫為對應新 API 的測試，見 §六） |
 | `src/fetcher.py`（`Fetcher.resolve_backfill_trading_day`） | 本地優先掃描＋必要時逐日輕量確認交易日，回傳候選前一交易日字串或 `None` | 🔴 新增 |
 | `src/fetcher.py`（`Fetcher.ensure_etf_holdings`） | 本地優先讀取，否則依 `SUPPORTS_BACKFILL` 決定是否即時回補並落地 | 🔴 新增 |
 | `src/fetcher.py`（`_BACKFILL_LOOKBACK_DAYS_MAX`） | 模組層常數，`resolve_backfill_trading_day()` 逐日掃描的天數上限，預設建議 10（涵蓋農曆春節等長假），待 §六 Roy Chiang 確認 | 🔴 新增 |
@@ -234,7 +288,7 @@ flowchart LR
 
 | # | 服務 | 呼叫方 | 原呼叫時機 | 本次新增呼叫時機 |
 | :--- | :--- | :--- | :--- | :--- |
-| 1 | 群益／復華 PCF 端點（既有） | `CapitalPcfAdapter`／`FuhwaPcfAdapter` | 每日對 `target_date` 呼叫一次 | 新增：本地缺前一交易日快照時，對 `prev_date` 額外呼叫一次（`ensure_etf_holdings()`） |
+| 1 | 群益／復華／野村／元大 PCF 端點（野村新增查詢參數；元大改用全新端點取代原 HTML 頁面） | `CapitalPcfAdapter`／`FuhwaPcfAdapter`／`NomuraPcfAdapter`／`YuantaPcfAdapter` | 每日對 `target_date` 呼叫一次（野村原本不帶日期參數；元大原本呼叫的是 HTML 頁面，非本次改用的 `PCF/Daily` API） | 新增：本地缺前一交易日快照時，對 `prev_date` 額外呼叫一次（`ensure_etf_holdings()`）；野村是加參數後首次用於非今日查詢，元大則是改用新端點後首次用於非今日查詢 |
 | 2 | FinMind `TaiwanStockInstitutionalInvestorsBuySell`（既有） | `FinMindClient.fetch_institutional_trades` | 每日對 `target_date` 呼叫（`Fetcher._fetch_institutional_trades`） | 新增：本地完全無歷史快照時，`resolve_backfill_trading_day()` 逐日輕量呼叫確認候選日期是否為交易日（僅取一檔監控股票判斷即可，不需全清單） |
 
 ### 時序圖：本地缺前一交易日快照時的就近回補流程
@@ -293,10 +347,9 @@ sequenceDiagram
 
 | 代碼 | 觸發情境 | 對應處理方式 |
 | :--- | :--- | :--- |
-| **`FETCH_ISSUER_PCF_BACKFILL_UNSUPPORTED`**（🔴 新增） | `ensure_etf_holdings()` 發現本地無前一天快照，且該 ETF 對應 Adapter `SUPPORTS_BACKFILL=False` | 記錄 Log 明確說明「該投信不支援非當日查詢」，不發出請求，回傳空清單，該 ETF 本次略過換倉比對（非錯誤） |
-| **`FETCH_ISSUER_PCF_BACKFILL_NO_DATA`**（🔴 新增） | `SUPPORTS_BACKFILL=True` 的 Adapter 實際呼叫後，該日仍查無資料（很可能已超出官網保留天數） | 記錄 Log，回傳空清單，該 ETF 本次略過換倉比對（非錯誤） |
-| **`FETCH_ISSUER_PCF_BACKFILL_LOOKUP_EXHAUSTED`**（🔴 新增） | `resolve_backfill_trading_day()` 逐日掃描 `_BACKFILL_LOOKBACK_DAYS_MAX` 天後仍找不到任何交易日 | 記錄 Log（區分於原「找不到前一交易日快照（可能為首次執行）」的模糊訊息，明確指出已嘗試回補但超出掃描上限），整批 ETF 換倉比對本次略過 |
-| `FETCH_ISSUER_PCF_ERROR`／`NO_DATA`／`ANOMALY_DETECTED`（既有，見 [SD-ETF換倉資料來源方案評估-投信官網爬蟲-系統設計書.md §五](./SD-ETF換倉資料來源方案評估-投信官網爬蟲-系統設計書.md)） | `ensure_etf_holdings()` 內呼叫 `provider.fetch_holdings()` 一樣可能觸發既有錯誤情境 | 沿用既有處理方式，回補路徑與平常抓取路徑共用同一套錯誤處理與健全性檢查，不另開一套邏輯 |
+| **`FETCH_ISSUER_PCF_NO_PREVIOUS_DAY`**（🔴 新增，2026-08-21 依 Roy Chiang 指示由原本三個獨立代碼統一合併） | **統一涵蓋以下三種成因**，只要「該 ETF 這次沒有前一交易日持股可供比對」，一律歸類為同一種對外可見結果：①`ensure_etf_holdings()` 發現本地無前一天快照，且該 ETF 對應 Adapter `SUPPORTS_BACKFILL=False`（不支援非當日查詢）；②`SUPPORTS_BACKFILL=True` 的 Adapter 實際呼叫後仍查無資料／逾時／解析異常（很可能已超出官網保留天數，或該次請求失敗）；③`resolve_backfill_trading_day()` 逐日掃描 `_BACKFILL_LOOKBACK_DAYS_MAX` 天後仍找不到任何交易日 | **統一處理**：僅保留當日快照，不執行換倉比對，不產生 `RebalanceEvent`（非錯誤）。**Log 訊息仍依上述①②③三種成因分別記錄不同文字**方便人工排查根因，但下游（`RebalanceClassifier`／`main.py`）**不再對這三種成因做任何分支處理**，全部視為同一種「無前一交易日資訊」的結果，簡化原先三個獨立代碼各自需要維護對應處理路徑的複雜度 |
+| `FETCH_ISSUER_PCF_ERROR`／`NO_DATA`／`ANOMALY_DETECTED`（既有，見 [SD-ETF換倉資料來源方案評估-投信官網爬蟲-系統設計書.md §五](./SD-ETF換倉資料來源方案評估-投信官網爬蟲-系統設計書.md)） | `ensure_etf_holdings()` 內呼叫 `provider.fetch_holdings()` 一樣可能觸發既有錯誤情境 | 沿用既有處理方式，回補路徑與平常抓取路徑共用同一套錯誤處理與健全性檢查；這些既有代碼觸發時同樣併入上方 `FETCH_ISSUER_PCF_NO_PREVIOUS_DAY` 的統一結果（僅保留當日快照、略過比對），不另開一套下游分支邏輯 |
+| ~~`FETCH_ISSUER_PCF_NODE_UNAVAILABLE`~~／~~`FETCH_ISSUER_PCF_NUXT_EXTRACT_ERROR`~~（既有，隨元大改採 API 而移除） | 原為元大 HTML／Nuxt 解析失敗、Node.js 不存在時觸發（見 [SD-ETF換倉資料來源方案評估-投信官網爬蟲-系統設計書.md §五](./SD-ETF換倉資料來源方案評估-投信官網爬蟲-系統設計書.md)） | 🔴 **本次隨 `yuanta.py` 整支重寫而移除**，不再有 Node.js 子行程可能失敗的情境；`PCF/Daily` API 若回應結構不符預期，改沿用其餘 JSON Adapter（如國泰/群益/復華）的既有慣例，拋出 `FETCH_ISSUER_PCF_PARSE_ERROR` |
 
 ### 排程／SP 清單
 
@@ -309,7 +362,7 @@ sequenceDiagram
 | 回補請求失敗（逾時／非預期例外） | 沿用既有「單一資料源失敗不中斷全局」原則，捕捉例外、記錄 Log、該 ETF 本次略過換倉比對，不影響其他 ETF 或三大法人等其他模組 |
 | 回補請求成功但筆數異常驟降 | 沿用既有 `_is_holding_count_anomaly()`，回補路徑與平常抓取路徑共用同一套健全性檢查，異常時不落地、視同查無資料 |
 | `_meta.json` 局部更新併發寫入 | 沿用既有「單一批次腳本、單一執行緒」的既有前提，`upsert_meta_source()` 為 read-modify-write，若未來改為並行執行需另外評估鎖機制（非本次範圍，本專案目前無此需求） |
-| 深度歷史回補需求 | 明確不支援，log 訊息需清楚說明原因（超出掃描上限／投信不支援回補），避免使用者誤以為是暫時性錯誤而重試 |
+| 深度歷史回補需求 | 明確不支援，統一歸類為 `FETCH_ISSUER_PCF_NO_PREVIOUS_DAY`，但 log 訊息仍需清楚說明實際原因（超出掃描上限／投信不支援回補／已支援但查無資料），避免使用者誤以為是暫時性錯誤而重試 |
 
 ---
 
@@ -318,10 +371,17 @@ sequenceDiagram
 | # | 項目 | 待誰確認 | 確認結果 |
 | :--- | :--- | :--- | :--- |
 | 1 | `_BACKFILL_LOOKBACK_DAYS_MAX` 建議預設值為 10（日曆天，涵蓋農曆春節等長假） | Roy Chiang | 待確認 |
-| 2 | 群益／復華官網 PCF 資料實際保留天數上限，目前僅驗證過 1～2 個交易日內可查詢成功，尚未（也不建議主動）探測更長天數 | 開發人員／Roy Chiang | 待確認是否需要正式探測，或維持「不主動探測、以實際查無資料時的 `FETCH_ISSUER_PCF_BACKFILL_NO_DATA` 自然反映上限」 |
+| 2 | 群益／復華／野村／元大官網 PCF 資料實際保留天數上限，目前僅驗證過 1～2 個交易日內可查詢成功（野村、元大目前均僅單一日期驗證過一次），尚未（也不建議主動）探測更長天數 | 開發人員／Roy Chiang | 待確認是否需要正式探測，或維持「不主動探測、以實際查無資料時統一歸類為 `FETCH_ISSUER_PCF_NO_PREVIOUS_DAY` 自然反映上限」 |
 | 3 | 是否需要在 `ETF_HOLDING_RECORD` 增加「本筆資料是否由回補產生」的稽核欄位 | Roy Chiang | 待確認（本次設計為不新增，見 §二 設計要點） |
 | 4 | 未來若國泰／富邦官網改版後補上可驗證的交易日期欄位，是否要重新評估將其 `SUPPORTS_BACKFILL` 開放為 `True` | 開發人員 | 待確認（本文件已預留判準：需同時符合「送出查詢日期」與「回傳內容可驗證」兩條件） |
 | 5 | 深度歷史回補（如數週前）若未來真有明確需求，是否另立文件評估改用具備真正歷史存檔的資料來源 | Roy Chiang | 待確認，非本次阻塞項 |
+| 6 | 野村 `SearchDate` 目前只用一組日期（`2026-08-11`）人工測試過一次，建議比照復華當初「8/19～8/20 兩個交易日交叉驗證」的作法，再多測至少一組不同日期，確認不是巧合命中 | Roy Chiang／開發人員 | 待確認；2026-08-21 Roy Chiang 已指示逕行採用實作，此項列為後續補強，非本次實作阻塞項（與第 11 項元大情況相同） |
+| 7 | 野村 `SearchDate` 參數為非官方文件記載、透過 Postman 手動測試逆推出來的欄位名稱，官網日後改版有較高機率悄悄失效或改名，是否需要比照 [fuhwa.py](../../../src/issuer_pcf/fuhwa.py) 對「查無資料/格式不符時默默回官網首頁 HTML」的情境額外加一層防呆（而非直接當成查無資料） | 開發人員 | 待確認 |
+| 8 | 元大 `PCF/Daily` API（`etfapi.yuantaetfs.com/.../bridge?...FuncId=PCF/Daily`）的完整回應內容是否含 `PCF.trandate` 或同等可驗證日期欄位 | Roy Chiang | ✅ **已確認，2026-08-21**：Postman 實測回應含 `"trandate": "20260817"`，欄位存在且語意與現行 `yuanta.py` 解析 Nuxt 狀態時使用的 `PCF.trandate` 一致 |
+| 9 | 元大是否要**整支重構** `yuanta.py`（拿掉現行抓 HTML＋暫存檔＋`subprocess.run(["node", ...])` 解析 Nuxt 狀態的機制，改直接呼叫 `PCF/Daily` API） | Roy Chiang | ✅ **已確認，2026-08-21**：採整支重構，HTML／Node.js 解析機制不再保留（不做「兩套並存」），見 §四內部元件設計；連帶移除 `FETCH_ISSUER_PCF_NODE_UNAVAILABLE`／`NUXT_EXTRACT_ERROR` 錯誤碼 |
+| 10 | `PCF/Daily` API 是否為官方文件記載的正式介面（而非逆向工程找到），呼叫是否需要特定 Header／Referer／頻率限制；第一支 `GetLatestIndex` API 經檢視為指數/標的物行情資料、非 ETF 成分股清單，本文件判斷不適用於本次持倉查詢需求，如未來有其他用途需求需另行評估 | 開發人員 | 待確認；非官方文件記載為已知風險，實作時建議沿用其餘 Adapter「單一來源失敗不中斷全局」原則因應，不因此延後導入 |
+| 11 | 元大 `date` 參數目前僅用一組日期實測過（截圖顯示回應 `trandate: 20260817`），建議比照復華當初「多交易日交叉驗證」的作法，再測至少一組不同日期，確認站方確實依 `date` 參數回應、而非巧合命中 | Roy Chiang／開發人員 | 待確認；2026-08-21 Roy Chiang 已指示逕行採用實作，此項列為後續補強，非本次實作阻塞項 |
+| 12 | `tests/test_issuer_pcf_yuanta.py`／`tests/test_issuer_pcf_yuanta_integration.py`／`tests/fixtures/yuanta_pcf_0050.html`／`src/issuer_pcf/scripts/extract_nuxt_state.js` 皆針對現行 HTML／Nuxt 解析機制而寫，`yuanta.py` 整支重寫後需同步改寫測試（改為對 `PCF/Daily` API 回應的 mock 測試）與移除不再使用的檔案 | 開發人員 | 待確認；實作時一併處理，見 /dev 實作範圍 |
 
 ---
 
@@ -335,3 +395,7 @@ sequenceDiagram
 - `f:\projects\FinanceTracker\src\storage.py`（現行實作，待依 §二、§四調整）
 - `f:\projects\FinanceTracker\src\issuer_pcf\base.py`（現行實作，待依 §四調整）
 - `f:\projects\FinanceTracker\src\issuer_pcf\capital.py`／`fuhwa.py`（現行實作，待依 §四調整）
+- `f:\projects\FinanceTracker\src\issuer_pcf\nomura.py`（現行實作，待依 §四新增 `SearchDate` 參數與日期驗證邏輯；2026-08-21 Postman 手動測試發現官網 API 支援此參數，為本文件第二輪異動之依據）
+- `f:\projects\FinanceTracker\src\issuer_pcf\yuanta.py`（現行實作，待依 §四**整支重寫**為呼叫 `PCF/Daily` API，移除 HTML／Node.js 解析機制；2026-08-21 Postman 手動測試發現並確認此 API 支援 `date`／`trandate` 驗證，為本文件第五～七輪異動之依據）
+- `f:\projects\FinanceTracker\src\issuer_pcf\scripts\extract_nuxt_state.js`（現行實作，`yuanta.py` 重寫後不再被呼叫，待隨 §四異動一併移除）
+- `f:\projects\FinanceTracker\tests\test_issuer_pcf_yuanta.py`／`test_issuer_pcf_yuanta_integration.py`／`fixtures\yuanta_pcf_0050.html`（現行測試，待依 §六第 12 項改寫為對應 `PCF/Daily` API 回應的測試）
