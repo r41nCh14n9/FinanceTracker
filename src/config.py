@@ -134,6 +134,16 @@ class ConfigLoader:
             mapping["issuer_internal_code"] = internal_code
         return mapping
 
+    def get_issuer_name(self, etf_id: str) -> str:
+        """回傳 ETF 對應投信的中文顯示名稱（例如「元大投信」），純粹給 log 訊息使用；
+        查無對照時退回 ETF 代碼本身，不拋例外，避免記 log 這種非關鍵路徑反而讓程式中斷。
+        """
+        issuer_key = self._etf_issuer_key.get(etf_id)
+        if issuer_key is None:
+            return etf_id
+        issuer = self._issuer_registry["issuers"].get(issuer_key, {})
+        return issuer.get("name", issuer_key)
+
     # --- 投信開放狀態（isEnabled feature flag）與可監控 ETF 清單 ---
     def get_enabled_issuers(self) -> dict[str, dict]:
         """回傳目前 isEnabled=true 的投信對照（鍵為投信代碼），供檢核或分流查詢使用。"""
@@ -163,6 +173,11 @@ class ConfigLoader:
         """持股筆數較前一交易日驟降多少百分比時，視為投信網站改版造成的解析異常而非真實清倉；
         選填欄位，未設定時預設 50%。"""
         return float(self._thresholds.get("default", {}).get("etf_holding_drop_pct", 50.0))
+
+    def get_snapshot_retention_days(self) -> int:
+        """快照/報告目錄保留天數，超過此天數（以執行當下日期回推）視為過期可清除；
+        選填欄位，未設定時預設 365 天（1 年）。"""
+        return int(self._thresholds.get("default", {}).get("snapshot_retention_days", 365))
 
     # --- 門檻：個股三大法人雙門檻（成交量佔比 / 市值分級金額） ---
     def get_volume_ratio_threshold(self) -> float:

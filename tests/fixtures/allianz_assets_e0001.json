@@ -1,0 +1,132 @@
+{
+  "Entries": {
+    "FundID": "E0001",
+    "Data": {
+      "FundAsset": {
+        "Aum": "9923084272",
+        "Units": "652458000",
+        "Nav": "15.21",
+        "NavDate": "2026/08/21",
+        "PCFDate": "2026/08/24"
+      },
+      "Table": [
+        {
+          "TableTitle": "",
+          "Columns": [
+            {
+              "Name": null,
+              "TextAlign": null
+            }
+          ],
+          "Rows": [
+            [
+              " ",
+              " ",
+              " ",
+              " "
+            ],
+            [
+              "股票",
+              "TWD$9,475,097,854",
+              "TWD",
+              "9,475,097,854"
+            ],
+            [
+              "期貨",
+              "TWD$216,662,400",
+              "TWD",
+              "216,662,400"
+            ]
+          ]
+        },
+        {
+          "TableTitle": "股票 (95.49%)",
+          "Columns": [
+            {
+              "Name": "序號",
+              "TextAlign": "center"
+            },
+            {
+              "Name": "股票代號",
+              "TextAlign": "center"
+            },
+            {
+              "Name": "股票名稱",
+              "TextAlign": "center"
+            },
+            {
+              "Name": "股數",
+              "TextAlign": "center"
+            },
+            {
+              "Name": "權重(%)",
+              "TextAlign": "center"
+            }
+          ],
+          "Rows": [
+            [
+              "1",
+              "2059",
+              "川湖",
+              "41,000",
+              "5.51%"
+            ],
+            [
+              "2",
+              "2330",
+              "台積電",
+              "150,000",
+              "3.64%"
+            ],
+            [
+              "3",
+              "3008",
+              "大立光電",
+              "50,000",
+              "2.83%"
+            ]
+          ]
+        },
+        {
+          "TableTitle": "期貨",
+          "Columns": [
+            {
+              "Name": "序號",
+              "TextAlign": "center"
+            },
+            {
+              "Name": "期貨代號",
+              "TextAlign": "center"
+            },
+            {
+              "Name": "期貨名稱",
+              "TextAlign": "center"
+            },
+            {
+              "Name": "口數",
+              "TextAlign": "center"
+            },
+            {
+              "Name": "權重(%)",
+              "TextAlign": "center"
+            },
+            {
+              "Name": "契約年月",
+              "TextAlign": "center"
+            }
+          ],
+          "Rows": [
+            [
+              "1",
+              "TX",
+              "台指期貨",
+              "24",
+              "2.16%",
+              "2026/09"
+            ]
+          ]
+        }
+      ]
+    }
+  }
+}

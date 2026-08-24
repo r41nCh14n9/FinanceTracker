@@ -7,11 +7,18 @@
 股本快取（capital_stock）比較特別，是按股票代碼存放、不分日期的單一檔案，
 放在 data/reference/ 下面而不是 data/snapshots/{date}/ 底下，因為股本是季更新資料，
 放進每天的快照只會讓幾乎一樣的內容重複存好幾百份。
+
+`purge_expired()` 負責清掉太舊的歷史資料，只會動 snapshots/ 跟 reports/ 這兩個
+按日期分目錄的路徑，reference/ 底下的股本快取因為是「目前最新值」而非歷史紀錄，
+一律不動。
 """
 from __future__ import annotations
 
 import dataclasses
 import json
+import re
+import shutil
+from datetime import date, timedelta
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -24,11 +31,23 @@ from src.models import (
     InstitutionalTradeRecord,
     MarketInstitutionalRecord,
     NotificationLogEntry,
+    PurgeResult,
     RebalanceEvent,
     SourceStatus,
     StockCapitalSnapshot,
     StockDailyTrading,
 )
+
+_DATE_DIR_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def _is_valid_date(text: str) -> bool:
+    """格式對不代表值合法（例如 9999-99-99），這裡再用 date.fromisoformat() 真的解析一次。"""
+    try:
+        date.fromisoformat(text)
+        return True
+    except ValueError:
+        return False
 
 
 class _EnumJSONEncoder(json.JSONEncoder):
@@ -168,3 +187,48 @@ class SnapshotRepository:
             if meta and meta.get("is_trading_day"):
                 return candidate
         return None
+
+    # --- 保留清除：只動 snapshots/reports 這兩個按日期分目錄的路徑，reference/ 不碰 ---
+    def purge_expired(self, retention_days: int, as_of_date: date, dry_run: bool = False) -> PurgeResult:
+        cutoff = (as_of_date - timedelta(days=retention_days)).isoformat()
+
+        deleted: list[str] = []
+        skipped_invalid_format: list[str] = []
+        failed: list[tuple[str, str]] = []
+
+        for base_dir in (self._snapshots_dir, self._reports_dir):
+            self._purge_expired_dir(base_dir, cutoff, dry_run, deleted, skipped_invalid_format, failed)
+
+        return PurgeResult(
+            cutoff_date=cutoff, deleted=deleted, skipped_invalid_format=skipped_invalid_format, failed=failed,
+        )
+
+    @staticmethod
+    def _purge_expired_dir(
+        base_dir: Path,
+        cutoff: str,
+        dry_run: bool,
+        deleted: list[str],
+        skipped_invalid_format: list[str],
+        failed: list[tuple[str, str]],
+    ) -> None:
+        if not base_dir.exists():
+            return
+        for entry in sorted(base_dir.iterdir()):
+            if not entry.is_dir():
+                continue
+            if not _DATE_DIR_PATTERN.match(entry.name) or not _is_valid_date(entry.name):
+                # 名稱長得不像合法日期就一律略過，不猜測、不連坐清除，避免防呆邏輯本身誤刪不明資料。
+                skipped_invalid_format.append(str(entry))
+                continue
+            if entry.name >= cutoff:
+                continue  # 還在保留範圍內
+
+            if dry_run:
+                deleted.append(str(entry))
+                continue
+            try:
+                shutil.rmtree(entry)
+                deleted.append(str(entry))
+            except OSError as exc:
+                failed.append((str(entry), str(exc)))

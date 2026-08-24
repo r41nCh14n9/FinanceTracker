@@ -59,6 +59,8 @@ _TIER_LABELS = {
     MarketCapTier.SMALL: "中小型",
 }
 
+_REPORT_HEADER_PREFIX = "【籌碼監控日報】"
+
 
 class MessageFormatter:
     def format(
@@ -69,38 +71,53 @@ class MessageFormatter:
         institutional_trades: list[dict],
         rebalance_events: list[RebalanceEvent],
     ) -> list[str]:
-        """回傳這次要推播的訊息清單，依序為：三大法人一組（大盤＋個股，可能因內容過長
-        被自動分頁成好幾則），接著是每檔「當天有換倉」的 ETF 各自一組（同樣可能被分頁）。
-        清單的順序就是實際推播順序。
+        """回傳這次要推播的訊息清單：大盤三大法人動態、個股買賣超、各檔 ETF 換倉動態
+        全部合併進同一份簡報，盡量塞進同一則訊息裡；只有整份內容長度逼近 LINE 訊息上限
+        時才會自動分頁成好幾則，不會因為主題不同就無條件拆成多則訊息（訊息則數會計入
+        每日/每月推播配額，能合併就合併）。
         """
-        messages = self._format_institutional_messages(
-            report_date, market_alerts, stock_alerts, institutional_trades
-        )
-        for etf_id, events in self._group_by_etf(rebalance_events).items():
-            messages.extend(self._format_etf_messages(report_date, etf_id, events))
-        return messages
+        header_lines = [f"{_REPORT_HEADER_PREFIX}{report_date}"]
+        body_blocks = self._build_market_section(market_alerts)
+        body_blocks += self._build_stock_section(stock_alerts, institutional_trades)
+        body_blocks += self._build_etf_rebalance_section(rebalance_events)
+        return self._paginate(header_lines, body_blocks)
 
-    def _format_institutional_messages(
-        self,
-        report_date: str,
-        market_alerts: list[InstitutionalAlert],
-        stock_alerts: list[InstitutionalAlert],
-        institutional_trades: list[dict],
-    ) -> list[str]:
-        header_lines = [f"【籌碼監控日報】{report_date}", "", "◆ 大盤三大法人動態"]
-        header_lines.extend(self._format_market_alerts(market_alerts))
-        header_lines.extend(["", "◆ 三大法人買賣超（個股）"])
+    def _build_market_section(self, market_alerts: list[InstitutionalAlert]) -> list[list[str]]:
+        """大盤動態一定簡短（最多三個法人各一行），整節當成一個不可拆的 block 就好。"""
+        return [["", "◆ 大盤三大法人動態", *self._format_market_alerts(market_alerts)]]
 
+    def _build_stock_section(
+        self, stock_alerts: list[InstitutionalAlert], institutional_trades: list[dict]
+    ) -> list[list[str]]:
+        """區塊標題跟第一檔股票的內容黏在同一個 block，避免分頁時標題留在某一頁、
+        內容卻全部擠到下一頁；其餘每一檔股票各自獨立成一個 block，真的很多檔觸發時
+        才允許從股票與股票之間分頁。
+        """
         stock_blocks = self._format_stock_alert_blocks(stock_alerts, institutional_trades)
         if not stock_blocks:
             stock_blocks = [["  （無達門檻標的）"]]
+        first_block, *rest_blocks = stock_blocks
+        return [["", "◆ 三大法人買賣超（個股）", *first_block]] + rest_blocks
 
-        return self._paginate(header_lines, stock_blocks)
-
-    def _format_etf_messages(self, report_date: str, etf_id: str, events: list[RebalanceEvent]) -> list[str]:
-        header_lines = [f"【籌碼監控日報】{report_date}", "", f"◆ {etf_id} ETF 換倉動態"]
-        body_blocks = [[line] for line in self._format_events(events)]
-        return self._paginate(header_lines, body_blocks)
+    def _build_etf_rebalance_section(self, rebalance_events: list[RebalanceEvent]) -> list[list[str]]:
+        """所有有換倉的 ETF 合併進同一個「◆ ETF 換倉動態」大標題底下，每檔 ETF 用
+        「- {etf_id}:」子標題區隔，不再像以前那樣每檔 ETF 各自起一個「◆」大標題。
+        大標題只黏在第一檔 ETF 的 block 開頭出現一次；每檔 ETF 的子標題都跟該檔第一筆
+        事件黏在同一個 block，避免分頁時子標題被單獨留在某一頁、內容卻擠到下一頁；
+        同一檔 ETF 其餘事件各自獨立成 block，真的很多筆時才允許在同一檔 ETF 內部分頁。
+        """
+        blocks: list[list[str]] = []
+        is_first_etf = True
+        for etf_id, events in self._group_by_etf(rebalance_events).items():
+            event_lines = self._format_events(events)
+            if not event_lines:
+                continue
+            first_line, *rest_lines = event_lines
+            etf_header = ["", "◆ ETF 換倉動態", f"- {etf_id}:", first_line] if is_first_etf else ["", f"- {etf_id}:", first_line]
+            blocks.append(etf_header)
+            blocks.extend([[line] for line in rest_lines])
+            is_first_etf = False
+        return blocks
 
     @staticmethod
     def _paginate(header_lines: list[str], body_blocks: list[list[str]]) -> list[str]:

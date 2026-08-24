@@ -8,6 +8,7 @@ from __future__ import annotations
 import io
 import logging
 import re
+import warnings
 
 import openpyxl
 import requests
@@ -66,7 +67,16 @@ class UniPcfAdapter(IssuerPcfProvider):
     def _fetch_asset_sheet(self, session: requests.Session, fund_code: str) -> tuple[list[tuple], str]:
         resp = session.get(_ASSET_URL, params={"fundCode": fund_code}, timeout=_REQUEST_TIMEOUT_SECONDS)
         resp.raise_for_status()
-        workbook = openpyxl.load_workbook(io.BytesIO(resp.content), data_only=True)
+        with warnings.catch_warnings():
+            # 這份檔案是站方用 NPOI（非真正的 Excel）產生的，沒有內建預設樣式；
+            # openpyxl 讀取時只是自動套用它自己的預設值頂著，資料本身讀取不受影響，
+            # 純粹是提示性警告，不消掉的話每次抓資料都會洗版排程 log。
+            warnings.filterwarnings(
+                "ignore",
+                message="Workbook contains no default style, apply openpyxl's default",
+                category=UserWarning,
+            )
+            workbook = openpyxl.load_workbook(io.BytesIO(resp.content), data_only=True)
         rows = list(workbook.worksheets[0].iter_rows(values_only=True))
         return rows, self._parse_roc_date(rows)
 

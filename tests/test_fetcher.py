@@ -36,6 +36,10 @@ class _FakeConfig:
     def get_issuer_mapping(self, etf_id):
         return self._issuer_mappings[etf_id]
 
+    @staticmethod
+    def get_issuer_name(etf_id):
+        return f"測試投信（{etf_id}）"
+
     def get_etf_holding_count_drop_pct_threshold(self):
         return self._holding_drop_pct_threshold
 
@@ -68,6 +72,7 @@ def _quiet_finmind():
     finmind.fetch_capital_stock.return_value = None
     finmind.fetch_market_institutional.return_value = None
     finmind.fetch_broker_trades.return_value = []
+    finmind.fetch_trading_dates.return_value = []
     return finmind
 
 
@@ -148,6 +153,48 @@ def test_capital_stock_cache_malformed_content_treated_as_stale_not_crash(tmp_pa
 
     finmind.fetch_capital_stock.assert_called_once()  # 視為過期，重新抓一次
     assert meta.sources[DataSourceKey.FINMIND_BALANCE_SHEET].status in (SnapshotStatus.OK, SnapshotStatus.NO_DATA)
+
+
+def test_fetch_trading_dates_returns_dates_from_response():
+    client = FinMindClient(token="x")
+    resp = MagicMock()
+    resp.raise_for_status.return_value = None
+    resp.json.return_value = {"data": [{"date": "2026-08-24"}, {"date": "2026-08-25"}]}
+
+    with patch("src.fetcher.requests.get", return_value=resp):
+        dates = client.fetch_trading_dates("2026-08-23", "2026-08-25")
+
+    assert dates == ["2026-08-24", "2026-08-25"]
+
+
+def test_is_known_trading_day_returns_true_when_date_in_trading_calendar(tmp_path):
+    storage = _make_repo(tmp_path)
+    finmind = _quiet_finmind()
+    finmind.fetch_trading_dates.return_value = ["2026-08-24"]
+    fetcher = Fetcher(_FakeConfig(), storage, finmind_client=finmind, issuer_providers=_quiet_issuer_providers())
+
+    assert fetcher.is_known_trading_day("2026-08-24") is True
+    finmind.fetch_trading_dates.assert_called_once_with("2026-08-24", "2026-08-24")
+
+
+def test_is_known_trading_day_returns_false_when_date_not_in_trading_calendar(tmp_path):
+    """2026-08-23 是週日，交易日曆查詢區間內不會出現這一天。"""
+    storage = _make_repo(tmp_path)
+    finmind = _quiet_finmind()
+    finmind.fetch_trading_dates.return_value = []
+    fetcher = Fetcher(_FakeConfig(), storage, finmind_client=finmind, issuer_providers=_quiet_issuer_providers())
+
+    assert fetcher.is_known_trading_day("2026-08-23") is False
+
+
+def test_is_known_trading_day_returns_none_when_query_fails(tmp_path):
+    """交易日曆查詢本身失敗時要回傳 None（不確定），不能被誤判為「非交易日」而略過整個流程。"""
+    storage = _make_repo(tmp_path)
+    finmind = _quiet_finmind()
+    finmind.fetch_trading_dates.side_effect = requests.exceptions.Timeout("simulated timeout")
+    fetcher = Fetcher(_FakeConfig(), storage, finmind_client=finmind, issuer_providers=_quiet_issuer_providers())
+
+    assert fetcher.is_known_trading_day("2026-08-24") is None
 
 
 def test_fetch_institutional_trades_single_stock_failure_keeps_other_stocks_data():

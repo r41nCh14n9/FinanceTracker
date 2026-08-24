@@ -1,0 +1,26 @@
+{
+  "TotalPages": -1,
+  "TotalItems": 4,
+  "Entries": [
+    {
+      "CFundNo": "E0001",
+      "CSecuritiesCode": "00984A",
+      "CFullName": "安聯台灣高息成長主動式ETF證券投資信託基金"
+    },
+    {
+      "CFundNo": "E0002",
+      "CSecuritiesCode": "00993A",
+      "CFullName": "安聯台灣主動式ETF證券投資信託基金"
+    },
+    {
+      "CFundNo": "E0003",
+      "CSecuritiesCode": "00402A",
+      "CFullName": "安聯美國科技領航主動式ETF證券投資信託基金"
+    },
+    {
+      "CFundNo": "E0004",
+      "CSecuritiesCode": "00412A",
+      "CFullName": "安聯亞洲半導體主動式ETF證券投資信託基金"
+    }
+  ]
+}

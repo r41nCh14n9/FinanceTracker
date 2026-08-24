@@ -9,6 +9,8 @@
 #   scripts/run.sh fetch-only --date 2026-07-28      # 同上（1 的別名）
 #   scripts/run.sh 2                                 # 準備並檢查 .env，缺什麼變數就報錯退出
 #   scripts/run.sh check                             # 同上（2 的別名）
+#   scripts/run.sh purge                             # 只清除超過保留天數的舊快照/報告目錄，不跑抓取/分析/推播
+#   scripts/run.sh purge --dry-run                   # 同上，但只印出會清除哪些目錄，不實際刪除
 #
 # 模式 0 / 1 都會真的呼叫 FinMind / 證交所 API，執行前會先做模式 2 的檢查。
 set -euo pipefail
@@ -91,8 +93,13 @@ case "$mode" in
         echo "[run.sh] 真的抓外部資料，但不推播 LINE（main.py --dry-run）..."
         python main.py --dry-run "$@"
         ;;
+    purge)
+        check_env_vars
+        echo "[run.sh] 清除超過保留天數的舊快照/報告目錄..."
+        python main.py --purge "$@"
+        ;;
     *)
-        echo "[run.sh] 未知模式：$mode（可用：test / 0|full / 1|fetch-only / 2|check）" >&2
+        echo "[run.sh] 未知模式：$mode（可用：test / 0|full / 1|fetch-only / 2|check / purge）" >&2
         exit 1
         ;;
 esac

@@ -1,9 +1,11 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
-from main import _classify_rebalance_events
+import pytest
+
+from main import _classify_rebalance_events, _parse_target_date, main, run, run_purge
 from src.fetcher import Fetcher, FinMindClient
 from src.issuer_pcf.base import IssuerPcfProvider
-from src.models import DailySnapshotMeta, EtfHoldingRecord
+from src.models import DailySnapshotMeta, EtfHoldingRecord, PurgeResult
 from src.storage import SnapshotRepository
 
 
@@ -25,6 +27,10 @@ class _FakeConfig:
     @staticmethod
     def get_etf_holding_count_drop_pct_threshold():
         return 50.0
+
+    @staticmethod
+    def get_issuer_name(etf_id):
+        return f"測試投信（{etf_id}）"
 
 
 def _make_repo(tmp_path):
@@ -142,3 +148,185 @@ def test_classify_rebalance_events_skips_when_adapter_does_not_support_backfill(
 
     assert events == []
     provider.fetch_holdings.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "raw, expected",
+    [
+        ("20260824", "2026-08-24"),
+        ("2026-08-24", "2026-08-24"),
+        ("2026/08/24", "2026-08-24"),
+    ],
+)
+def test_parse_target_date_accepts_supported_formats(raw, expected):
+    assert _parse_target_date(raw) == expected
+
+
+@pytest.mark.parametrize("raw", ["2026.08.24", "2026年08月24日", "abc", "2026-13-01", ""])
+def test_parse_target_date_rejects_unsupported_formats(raw):
+    """不管是分隔符號不對、日期本身不合法、還是隨便亂打的字串，都要用同一句「日期格式
+    輸入錯誤」擋下來，不能讓錯的字串流進 FinMind／各投信官網才用不同方式各自炸開。
+    """
+    with pytest.raises(ValueError, match="日期格式輸入錯誤"):
+        _parse_target_date(raw)
+
+
+def test_main_aborts_before_run_when_date_format_invalid():
+    """格式錯誤要在真正呼叫 run() 之前就擋下來，不能讓錯的日期字串流進抓取流程。"""
+    with patch("main.run") as mock_run:
+        exit_code = main(["--date", "2026/8/24/"])
+
+    assert exit_code == 1
+    mock_run.assert_not_called()
+
+
+def test_main_normalizes_date_before_calling_run():
+    with patch("main.run", return_value=True) as mock_run:
+        exit_code = main(["--date", "20260824", "--dry-run"])
+
+    assert exit_code == 0
+    mock_run.assert_called_once_with("2026-08-24", dry_run=True)
+
+
+def _patch_run_dependencies():
+    """run() 內部會先建立 ConfigLoader/SnapshotRepository/Fetcher，這裡把三者換成假物件，
+    讓測試只關心「交易日曆事前檢查」這一段新增的短路邏輯，不用管抓取/分析內部細節。
+    """
+    return (
+        patch("main.ConfigLoader"),
+        patch("main.SnapshotRepository"),
+        patch("main.Fetcher"),
+        patch("main._evaluate_institutional_alerts", return_value=([], [], [])),
+        patch("main._classify_rebalance_events", return_value=[]),
+    )
+
+
+def test_run_skips_fetch_when_trading_day_calendar_confirms_non_trading_day():
+    """非 dry-run 時，交易日曆一旦確認非交易日，就不該再呼叫 fetch_all()，省下白白抓一輪的成本。"""
+    patchers = _patch_run_dependencies()
+    with patchers[0], patchers[1], patchers[2] as mock_fetcher_cls, patchers[3], patchers[4]:
+        mock_fetcher = mock_fetcher_cls.return_value
+        mock_fetcher.is_known_trading_day.return_value = False
+
+        result = run("2026-08-23", dry_run=False)
+
+    assert result is True
+    mock_fetcher.is_known_trading_day.assert_called_once_with("2026-08-23")
+    mock_fetcher.fetch_all.assert_not_called()
+
+
+def test_run_falls_back_to_fetch_all_when_trading_day_unknown():
+    """交易日曆查詢失敗（回傳 None）時要退回原本「抓了才知道」的流程，不能直接當非交易日跳過。"""
+    patchers = _patch_run_dependencies()
+    with patchers[0], patchers[1], patchers[2] as mock_fetcher_cls, patchers[3], patchers[4]:
+        mock_fetcher = mock_fetcher_cls.return_value
+        mock_fetcher.is_known_trading_day.return_value = None
+        mock_fetcher.fetch_all.return_value = MagicMock(is_trading_day=False)
+
+        result = run("2026-08-23", dry_run=False)
+
+    assert result is True
+    mock_fetcher.fetch_all.assert_called_once_with("2026-08-23")
+
+
+def test_run_skips_fetch_on_non_trading_day_even_in_dry_run_mode():
+    """非交易日本來就不會有任何有意義的資料，不管是不是 dry-run 都一樣，不能為了「預覽」
+    就放行去白白多打一輪外部 API，只為了印出同一則空洞的「無達門檻標的」。
+    """
+    patchers = _patch_run_dependencies()
+    with patchers[0], patchers[1], patchers[2] as mock_fetcher_cls, patchers[3], patchers[4]:
+        mock_fetcher = mock_fetcher_cls.return_value
+        mock_fetcher.is_known_trading_day.return_value = False
+
+        result = run("2026-08-23", dry_run=True)
+
+    assert result is True
+    mock_fetcher.fetch_all.assert_not_called()
+
+
+def test_run_still_previews_normally_in_dry_run_mode_on_trading_day():
+    """dry-run 的用途是「抓真資料但不推播」，交易日的預覽功能不受本次調整影響。"""
+    patchers = _patch_run_dependencies()
+    with patchers[0], patchers[1], patchers[2] as mock_fetcher_cls, patchers[3], patchers[4]:
+        mock_fetcher = mock_fetcher_cls.return_value
+        mock_fetcher.is_known_trading_day.return_value = True
+        mock_fetcher.fetch_all.return_value = MagicMock(is_trading_day=True)
+
+        result = run("2026-08-24", dry_run=True)
+
+    assert result is True
+
+
+def test_main_routes_to_run_purge_when_purge_flag_set():
+    """--purge 要完全走清除那條路，不能跟著跑抓取/分析/推播，--date 也不需要被解析。"""
+    with patch("main.run_purge", return_value=True) as mock_run_purge, patch("main.run") as mock_run:
+        exit_code = main(["--purge"])
+
+    assert exit_code == 0
+    mock_run_purge.assert_called_once_with(dry_run=False)
+    mock_run.assert_not_called()
+
+
+def test_main_passes_dry_run_through_to_run_purge():
+    with patch("main.run_purge", return_value=True) as mock_run_purge:
+        exit_code = main(["--purge", "--dry-run"])
+
+    assert exit_code == 0
+    mock_run_purge.assert_called_once_with(dry_run=True)
+
+
+def test_main_ignores_date_when_purge_flag_set():
+    """--purge --date 併用時，日期驗證完全不該被觸發（清除跟 --date 語意無關）。"""
+    with patch("main.run_purge", return_value=True), patch("main._parse_target_date") as mock_parse_date:
+        exit_code = main(["--purge", "--date", "not-a-real-date"])
+
+    assert exit_code == 0
+    mock_parse_date.assert_not_called()
+
+
+def test_main_returns_error_when_run_purge_fails():
+    with patch("main.run_purge", return_value=False):
+        exit_code = main(["--purge"])
+
+    assert exit_code == 1
+
+
+def test_run_purge_reads_retention_days_and_purges_as_of_today():
+    with patch("main.ConfigLoader") as mock_config_cls, patch("main.SnapshotRepository") as mock_storage_cls:
+        mock_config = mock_config_cls.return_value
+        mock_config.get_snapshot_retention_days.return_value = 180
+        mock_storage = mock_storage_cls.return_value
+        mock_storage.purge_expired.return_value = PurgeResult(
+            cutoff_date="2026-02-25", deleted=["data/snapshots/2025-01-01"],
+            skipped_invalid_format=[], failed=[],
+        )
+
+        result = run_purge(dry_run=False)
+
+    assert result is True
+    mock_storage.purge_expired.assert_called_once()
+    call_kwargs = mock_storage.purge_expired.call_args
+    assert call_kwargs.args[0] == 180  # retention_days 來自設定檔
+    assert call_kwargs.kwargs["dry_run"] is False
+
+
+def test_run_purge_returns_false_when_any_deletion_failed():
+    with patch("main.ConfigLoader") as mock_config_cls, patch("main.SnapshotRepository") as mock_storage_cls:
+        mock_config_cls.return_value.get_snapshot_retention_days.return_value = 365
+        mock_storage_cls.return_value.purge_expired.return_value = PurgeResult(
+            cutoff_date="2025-08-24", deleted=[], skipped_invalid_format=[],
+            failed=[("data/snapshots/2025-01-01", "permission denied")],
+        )
+
+        result = run_purge(dry_run=False)
+
+    assert result is False
+
+
+def test_run_purge_returns_false_on_config_error():
+    from src.config import ConfigError
+
+    with patch("main.ConfigLoader", side_effect=ConfigError("設定檔不存在")):
+        result = run_purge(dry_run=False)
+
+    assert result is False

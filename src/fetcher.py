@@ -166,6 +166,13 @@ class FinMindClient:
             return None
         return self._aggregate_market_rows(trade_date, rows)
 
+    def fetch_trading_dates(self, start_date: str, end_date: str) -> list[str]:
+        """查詢區間內台股實際有開市的交易日清單（證交所行事曆本身已排除週末與國定假日），
+        不需要像其餘資料集一樣逐股查詢，適合拿來單純確認某天是不是交易日。
+        """
+        resp = self._get(dataset="TaiwanStockTradingDate", start_date=start_date, end_date=end_date)
+        return [row["date"] for row in resp.get("data", [])]
+
     def _get(self, **params: str) -> dict:
         try:
             resp = requests.get(
@@ -248,6 +255,19 @@ class Fetcher:
         # 依 ETF 代碼覆寫要用哪個 provider，主要給測試用假物件取代真正的爬蟲；
         # 沒被覆寫的 ETF 一律依設定檔查 ADAPTER_REGISTRY 動態決定。
         self._issuer_providers = issuer_providers or {}
+
+    def is_known_trading_day(self, target_date: str) -> bool | None:
+        """在真正抓一輪三大法人／各投信官網之前，先跟 FinMind 的交易日曆確認 target_date
+        是不是交易日，省下非交易日當天白白呼叫一輪外部 API 的成本。查詢本身失敗（逾時、
+        API 異常等）時回傳 None，交由呼叫端退回原本「抓了資料才知道是不是交易日」的判斷
+        方式，不能讓這個加速用的檢查本身變成整支程式能不能執行的單點故障。
+        """
+        try:
+            trading_dates = self._finmind_client.fetch_trading_dates(target_date, target_date)
+        except Exception as exc:  # noqa: BLE001 - 只是想提早判斷，查詢失敗就退回原本流程
+            logger.warning("交易日曆查詢失敗，退回抓取後才判斷是否為交易日：%s", exc)
+            return None
+        return target_date in trading_dates
 
     def fetch_all(self, snapshot_date: str) -> DailySnapshotMeta:
         sources: dict[str, SourceStatus] = {
@@ -471,16 +491,22 @@ class Fetcher:
                 provider = self._resolve_issuer_provider(etf_id)
                 raw_rows = provider.fetch_holdings(etf_id, snapshot_date)
             except Exception as exc:  # noqa: BLE001 - 單一投信失敗不能讓其他 ETF 抓不到
-                logger.warning("投信官網 PCF 抓取失敗（%s）：%s", etf_id, exc)
+                self._log_etf_pcf(logging.WARNING, snapshot_date, etf_id, f"PCF 抓取失敗：{exc}")
                 last_error = str(exc)
                 continue
             if not raw_rows:
+                # 投信 Adapter 內部已經記過各自的詳細原因（例如頁面日期還沒更新到今天、
+                # 找不到對應內部代碼），這裡只補一行統一格式的結果彙總，方便掃 log。
+                self._log_etf_pcf(logging.INFO, snapshot_date, etf_id, "今日尚無持股資料，略過本次抓取")
                 continue
             if self._is_holding_count_anomaly(etf_id, prev_date, len(raw_rows)):
-                last_error = f"{etf_id} 持股筆數異常驟降，判定為解析異常，本次不採用（FETCH_ISSUER_PCF_ANOMALY_DETECTED）"
+                message = "持股筆數異常驟降，判定為解析異常，本次不採用（FETCH_ISSUER_PCF_ANOMALY_DETECTED）"
+                self._log_etf_pcf(logging.WARNING, snapshot_date, etf_id, message)
+                last_error = f"{etf_id} {message}"
                 continue
             records = [self._to_etf_holding_record(snapshot_date, etf_id, row) for row in raw_rows]
             self._storage.write_etf_holdings(snapshot_date, etf_id, records)
+            self._log_etf_pcf(logging.INFO, snapshot_date, etf_id, f"PCF 抓取成功，共 {len(records)} 檔持股")
             fetched_any = True
 
         if fetched_any:
@@ -488,6 +514,13 @@ class Fetcher:
         if last_error:
             return SourceStatus(status=SnapshotStatus.ERROR, error_message=last_error)
         return SourceStatus(status=SnapshotStatus.NO_DATA)
+
+    def _log_etf_pcf(self, level: int, snapshot_date: str, etf_id: str, message: str) -> None:
+        """統一 ETF PCF 抓取相關 log 的格式（查詢日期／ETF 代碼／投信名稱 - 訊息），
+        方便掃 log 時一眼看出是哪天、哪檔 ETF、哪家投信發生的事。
+        """
+        issuer_name = self._config.get_issuer_name(etf_id)
+        logger.log(level, "%s %s %s - %s", snapshot_date, etf_id, issuer_name, message)
 
     def _is_holding_count_anomaly(self, etf_id: str, prev_date: str | None, curr_count: int) -> bool:
         """投信網站局部改版時，Adapter 通常不會直接拋例外，而是靜靜解析出殘缺的持股清單
