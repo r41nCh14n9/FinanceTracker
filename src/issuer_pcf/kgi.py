@@ -1,11 +1,15 @@
 """凱基投信 PCF 資料來源：基金明細頁是傳統伺服器端渲染，完整持股表格已經存在原始 HTML
 回應裡，不需要額外呼叫 AJAX 端點，也不需要 Headless Browser。頁面網址用的是投信內部
 基金代碼（例如 009816 對應 J023），不是市場代碼；目前還沒查到能動態查詢對照的清單端點，
-先用固定表維護。頁面上的日期查詢對這張持股表格沒有作用，只能抓到當天資料。
+先用固定表維護。頁面本身沒有日期查詢參數，只能抓到當下最新一期。
+
+「持股比重」標題正下方有一個 `(YYYY/MM/DD)` 格式的日期（`<p class="fund-asset__date">`），
+跟緊接在後面的「股票」表格是同一個區塊，可以拿來驗證這批資料是不是查詢日期當天的。
 """
 from __future__ import annotations
 
 import logging
+import re
 
 import requests
 from bs4 import BeautifulSoup
@@ -18,6 +22,8 @@ _REQUEST_TIMEOUT_SECONDS = 30
 _USER_AGENT = "FinanceTracker-ChipMonitor/1.0"
 _URL_TEMPLATE = "https://www.kgifund.com.tw/Fund/Detail?fundID={fund_id}"
 _STOCK_SECTION_TITLE = "股票"
+_HOLDINGS_SECTION_TITLE = "持股比重"
+_HOLDINGS_DATE_PATTERN = re.compile(r"(\d{4})/(\d{1,2})/(\d{1,2})")
 
 # 市場代碼 -> 凱基投信內部基金代碼，頁面網址靠這組代碼組成，不能直接帶市場代碼進去。
 _FUND_ID_BY_TICKER = {
@@ -28,11 +34,18 @@ _FUND_ID_BY_TICKER = {
 
 class KgiPcfAdapter(IssuerPcfProvider):
     def fetch_holdings(self, etf_id: str, snapshot_date: str) -> list[dict]:
-        # 頁面沒有可信賴的交易日期欄位可以比對，且日期查詢對這張表格沒作用，
-        # 跟富邦/國泰一樣直接採用站方回傳的最新一筆資料，不做日期防呆。
         fund_id = self._resolve_fund_id(etf_id)
         html = self._fetch_html(fund_id)
         soup = BeautifulSoup(html, "html.parser")
+
+        holdings_date = self._find_holdings_date(soup)
+        if holdings_date != snapshot_date:
+            logger.warning(
+                "凱基 PCF 持股比重日期（%s）與查詢日期（%s）不符，視為當日尚未更新",
+                holdings_date, snapshot_date,
+            )
+            return []
+
         table = self._find_stock_table(soup)
         return self._parse_rows(table)
 
@@ -54,6 +67,20 @@ class KgiPcfAdapter(IssuerPcfProvider):
         )
         resp.raise_for_status()
         return resp.text
+
+    @staticmethod
+    def _find_holdings_date(soup: BeautifulSoup) -> str | None:
+        title = soup.find("div", class_="fund-asset__title", string=_HOLDINGS_SECTION_TITLE)
+        if title is None:
+            return None
+        date_tag = title.find_next("p", class_="fund-asset__date")
+        if date_tag is None:
+            return None
+        match = _HOLDINGS_DATE_PATTERN.search(date_tag.get_text())
+        if match is None:
+            return None
+        year, month, day = match.groups()
+        return f"{int(year):04d}-{int(month):02d}-{int(day):02d}"
 
     @staticmethod
     def _find_stock_table(soup: BeautifulSoup):

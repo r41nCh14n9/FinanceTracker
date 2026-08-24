@@ -9,8 +9,30 @@ _FIXTURE_PATH = Path(__file__).parent / "fixtures" / "kgi_detail_j023.html"
 
 _NO_STOCK_SECTION_HTML = """
 <html><body>
+<div class="fund-asset__title index-title">持股比重</div>
+<p class="fund-asset__date">(2026/08/24)</p>
 <h4 class="fund-asset__sub-title">淨值</h4>
 <table><tbody><tr name="content"><td>2026/08/24</td></tr></tbody></table>
+</body></html>
+"""
+
+_NO_HOLDINGS_DATE_HTML = """
+<html><body>
+<h4 class="fund-asset__sub-title">股票</h4>
+<table><tbody>
+<tr name="content"><td>2330</td><td>台積電</td><td>1,000</td><td>10.0</td></tr>
+</tbody></table>
+</body></html>
+"""
+
+_STALE_HOLDINGS_DATE_HTML = """
+<html><body>
+<div class="fund-asset__title index-title">持股比重</div>
+<p class="fund-asset__date">(2026/08/21)</p>
+<h4 class="fund-asset__sub-title">股票</h4>
+<table><tbody>
+<tr name="content"><td>2330</td><td>台積電</td><td>1,000</td><td>10.0</td></tr>
+</tbody></table>
 </body></html>
 """
 
@@ -66,3 +88,25 @@ def test_fetch_holdings_raises_when_stock_section_missing():
     with patch("src.issuer_pcf.kgi.requests.get", return_value=_fake_response(_NO_STOCK_SECTION_HTML)):
         with pytest.raises(RuntimeError, match="FETCH_ISSUER_PCF_PARSE_ERROR"):
             adapter.fetch_holdings("009816", "2026-08-24")
+
+
+def test_fetch_holdings_returns_empty_when_holdings_date_mismatches_snapshot_date():
+    """「持股比重」標題下的日期跟查詢日期對不上時，視為當日尚未更新，不採用這批資料。"""
+    adapter = KgiPcfAdapter()
+
+    with patch("src.issuer_pcf.kgi.requests.get", return_value=_fake_response(_STALE_HOLDINGS_DATE_HTML)):
+        records = adapter.fetch_holdings("009816", "2026-08-24")
+
+    assert records == []
+
+
+def test_fetch_holdings_returns_empty_when_holdings_date_section_missing():
+    """頁面連「持股比重」日期區塊都找不到時，沒有辦法確認資料新鮮度，一律視為當日尚未
+    更新，不採用；跟「股票」表格本身缺失（結構異常，直接報錯）是不同情況，不能混為一談。
+    """
+    adapter = KgiPcfAdapter()
+
+    with patch("src.issuer_pcf.kgi.requests.get", return_value=_fake_response(_NO_HOLDINGS_DATE_HTML)):
+        records = adapter.fetch_holdings("009816", "2026-08-24")
+
+    assert records == []
