@@ -1,0 +1,32 @@
+[
+  {
+    "event_date": "2026-08-24",
+    "etf_id": "00981A",
+    "component_stock_id": "8996",
+    "component_name": "高力",
+    "event_type": "REBALANCE",
+    "prev_shares": 1101000,
+    "curr_shares": 1301000,
+    "change_pct": 18.1653042688465
+  },
+  {
+    "event_date": "2026-08-24",
+    "etf_id": "00981A",
+    "component_stock_id": "2637",
+    "component_name": "慧洋-KY",
+    "event_type": "REBALANCE",
+    "prev_shares": 200000,
+    "curr_shares": 1000,
+    "change_pct": -99.5
+  },
+  {
+    "event_date": "2026-08-24",
+    "etf_id": "00981A",
+    "component_stock_id": "3443",
+    "component_name": "創意",
+    "event_type": "REBALANCE",
+    "prev_shares": 142000,
+    "curr_shares": 255000,
+    "change_pct": 79.5774647887324
+  }
+]
