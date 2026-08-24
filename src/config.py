@@ -174,6 +174,11 @@ class ConfigLoader:
         選填欄位，未設定時預設 50%。"""
         return float(self._thresholds.get("default", {}).get("etf_holding_drop_pct", 50.0))
 
+    def get_snapshot_retention_days(self) -> int:
+        """快照/報告目錄保留天數，超過此天數（以執行當下日期回推）視為過期可清除；
+        選填欄位，未設定時預設 365 天（1 年）。"""
+        return int(self._thresholds.get("default", {}).get("snapshot_retention_days", 365))
+
     # --- 門檻：個股三大法人雙門檻（成交量佔比 / 市值分級金額） ---
     def get_volume_ratio_threshold(self) -> float:
         """回傳百分比數字（例如 15.0 代表 15%），比對時記得除以 100。"""

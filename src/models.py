@@ -165,6 +165,16 @@ class MarketInstitutionalRecord:
 
 
 @dataclass
+class PurgeResult:
+    """一次快照/報告保留清除的執行結果，純粹是記憶體內的回傳值，不落地存檔。"""
+
+    cutoff_date: str
+    deleted: list[str]
+    skipped_invalid_format: list[str]
+    failed: list[tuple[str, str]]
+
+
+@dataclass
 class InstitutionalAlert:
     """門檻判斷後的達標結果，只有達標的項目才會存在；scope 決定要看 stock_id 還是純大盤層級。"""
 

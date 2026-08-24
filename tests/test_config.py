@@ -102,6 +102,24 @@ def test_etf_holding_count_drop_pct_threshold_reads_configured_value(tmp_path):
     assert config.get_etf_holding_count_drop_pct_threshold() == 30.0
 
 
+def test_snapshot_retention_days_defaults_when_not_configured(tmp_path):
+    """thresholds.json 沒特別設定這個欄位時，要有一個合理預設值（365 天），不是噴例外。"""
+    config_dir = _make_valid_config_dir(tmp_path)
+    config = ConfigLoader(config_dir=config_dir)
+
+    assert config.get_snapshot_retention_days() == 365
+
+
+def test_snapshot_retention_days_reads_configured_value(tmp_path):
+    config_dir = _make_valid_config_dir(tmp_path)
+    thresholds = json.loads((config_dir / "thresholds.json").read_text(encoding="utf-8"))
+    thresholds["default"]["snapshot_retention_days"] = 180
+    _write(config_dir / "thresholds.json", thresholds)
+    config = ConfigLoader(config_dir=config_dir)
+
+    assert config.get_snapshot_retention_days() == 180
+
+
 def test_broker_monitoring_enabled_when_flag_set(tmp_path):
     config_dir = _make_valid_config_dir(tmp_path)
     _write(config_dir / "broker_branches.json", {

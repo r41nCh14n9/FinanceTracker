@@ -1,4 +1,7 @@
 import json
+import shutil
+from datetime import date
+from unittest.mock import patch
 
 from src.models import (
     AlertScope,
@@ -192,3 +195,100 @@ def test_find_previous_trading_day_skips_non_trading_days(tmp_path):
 def test_find_previous_trading_day_returns_none_when_no_history(tmp_path):
     repo = _make_repo(tmp_path)
     assert repo.find_previous_trading_day("2026-07-29") is None
+
+
+def _touch(path):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("{}", encoding="utf-8")
+
+
+def test_purge_expired_removes_only_directories_older_than_retention(tmp_path):
+    repo = _make_repo(tmp_path)
+    _touch(tmp_path / "data" / "snapshots" / "2025-01-01" / "_meta.json")  # 超出範圍
+    _touch(tmp_path / "data" / "snapshots" / "2026-08-01" / "_meta.json")  # 仍在範圍內
+    _touch(tmp_path / "data" / "reports" / "2025-01-01" / "rebalance_events.json")  # 超出範圍
+    _touch(tmp_path / "data" / "reports" / "2026-08-01" / "rebalance_events.json")  # 仍在範圍內
+
+    result = repo.purge_expired(retention_days=365, as_of_date=date(2026, 8, 24))
+
+    assert not (tmp_path / "data" / "snapshots" / "2025-01-01").exists()
+    assert (tmp_path / "data" / "snapshots" / "2026-08-01").exists()
+    assert not (tmp_path / "data" / "reports" / "2025-01-01").exists()
+    assert (tmp_path / "data" / "reports" / "2026-08-01").exists()
+    assert len(result.deleted) == 2
+    assert result.failed == []
+
+
+def test_purge_expired_keeps_directory_exactly_at_cutoff(tmp_path):
+    """截止日當天本身仍算保留範圍內，只有嚴格早於截止日才刪除。"""
+    repo = _make_repo(tmp_path)
+    cutoff_dir = tmp_path / "data" / "snapshots" / "2025-08-24"
+    _touch(cutoff_dir / "_meta.json")
+
+    result = repo.purge_expired(retention_days=365, as_of_date=date(2026, 8, 24))
+
+    assert cutoff_dir.exists()
+    assert result.deleted == []
+
+
+def test_purge_expired_ignores_non_date_directories(tmp_path):
+    """名稱不是合法 YYYY-MM-DD 的目錄一律略過，不猜測、不嘗試處理。"""
+    repo = _make_repo(tmp_path)
+    junk_dir = tmp_path / "data" / "snapshots" / "2026"
+    _touch(junk_dir / "08" / "24" / "_meta.json")
+    bogus_date_dir = tmp_path / "data" / "snapshots" / "9999-99-99"
+    _touch(bogus_date_dir / "_meta.json")
+
+    result = repo.purge_expired(retention_days=365, as_of_date=date(2026, 8, 24))
+
+    assert junk_dir.exists()
+    assert bogus_date_dir.exists()
+    assert str(junk_dir) in result.skipped_invalid_format
+    assert str(bogus_date_dir) in result.skipped_invalid_format
+    assert result.deleted == []
+
+
+def test_purge_expired_dry_run_does_not_delete(tmp_path):
+    repo = _make_repo(tmp_path)
+    expired_dir = tmp_path / "data" / "snapshots" / "2025-01-01"
+    _touch(expired_dir / "_meta.json")
+
+    result = repo.purge_expired(retention_days=365, as_of_date=date(2026, 8, 24), dry_run=True)
+
+    assert expired_dir.exists()  # dry-run 不能真的刪
+    assert str(expired_dir) in result.deleted  # 但要回報「本次會清除」
+
+
+def test_purge_expired_does_not_touch_reference_dir(tmp_path):
+    repo = _make_repo(tmp_path)
+    reference_file = tmp_path / "data" / "reference" / "capital_stock" / "2330.json"
+    _touch(reference_file)
+    _touch(tmp_path / "data" / "snapshots" / "2025-01-01" / "_meta.json")
+
+    repo.purge_expired(retention_days=365, as_of_date=date(2026, 8, 24))
+
+    assert reference_file.exists()
+
+
+def test_purge_expired_continues_after_single_directory_failure(tmp_path):
+    """其中一個目錄刪除失敗，不能擋住其餘應清除目錄的處理。"""
+    repo = _make_repo(tmp_path)
+    broken_dir = tmp_path / "data" / "snapshots" / "2025-01-01"
+    ok_dir = tmp_path / "data" / "snapshots" / "2025-02-01"
+    _touch(broken_dir / "_meta.json")
+    _touch(ok_dir / "_meta.json")
+
+    real_rmtree = shutil.rmtree
+
+    def fake_rmtree(path):
+        if str(path) == str(broken_dir):
+            raise OSError("simulated permission error")
+        real_rmtree(path)
+
+    with patch("src.storage.shutil.rmtree", side_effect=fake_rmtree):
+        result = repo.purge_expired(retention_days=365, as_of_date=date(2026, 8, 24))
+
+    assert broken_dir.exists()  # 刪除失敗，維持原樣
+    assert not ok_dir.exists()  # 其餘目錄仍正常刪除
+    assert str(ok_dir) in result.deleted
+    assert any(path == str(broken_dir) for path, _error in result.failed)

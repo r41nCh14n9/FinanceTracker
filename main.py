@@ -3,6 +3,9 @@
 依序執行「抓取 -> 分析 -> 推播」；任何單一資料源或單一收訊者失敗都不會中斷整體流程，
 只有設定檔錯誤、推播全數失敗或未預期例外才會讓程式以非 0 結束碼結束
 （GitHub Actions 會因此寄出失敗通知信）。
+
+帶 --purge 執行時完全是另一條路：只清舊快照/報告目錄，不碰抓取/分析/推播，
+兩者互不影響，排程只是依序各跑一次。
 """
 from __future__ import annotations
 
@@ -14,6 +17,7 @@ from datetime import date, datetime
 from src.analyzer import InstitutionalTieredFilter, MarketInstitutionalFilter, RebalanceClassifier
 from src.config import ConfigError, ConfigLoader
 from src.fetcher import Fetcher
+from src.models import PurgeResult
 from src.notifier import MessageFormatter, Notifier
 from src.storage import SnapshotRepository
 
@@ -45,7 +49,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--date", default=None,
         help="指定執行日期，支援 YYYYMMDD、YYYY-MM-DD、YYYY/MM/DD 三種格式，預設為今日，供補跑使用",
     )
-    parser.add_argument("--dry-run", action="store_true", help="只印出簡報內容，不實際呼叫 LINE 推播")
+    parser.add_argument("--dry-run", action="store_true", help="只印出簡報內容，不實際呼叫 LINE 推播；與 --purge 併用時只預覽會清除哪些目錄")
+    parser.add_argument(
+        "--purge", action="store_true",
+        help="只執行快照/報告保留清除（依 thresholds.json 設定之保留天數），不執行抓取/分析/推播；此模式下 --date 會被忽略，清除截止日一律以執行當下日期為準",
+    )
     return parser.parse_args(argv)
 
 
@@ -104,6 +112,39 @@ def run(target_date: str, dry_run: bool = False) -> bool:
 
     return Notifier(config, storage).notify(
         target_date, market_alerts, stock_alerts, institutional_trades, rebalance_events
+    )
+
+
+def run_purge(dry_run: bool = False) -> bool:
+    """清掉太舊的快照/報告目錄，跟抓取/分析/推播完全脫鉤，可以獨立執行。清除截止日
+    一律以執行當下的日期回推保留天數計算，不吃 --date（清除的是「多久以前」的資料，
+    跟這次要不要補跑某個特定日期的分析無關）。
+    """
+    try:
+        config = ConfigLoader()
+    except ConfigError as exc:
+        logger.error("設定檔錯誤，中止執行：%s", exc)
+        return False
+
+    storage = SnapshotRepository()
+    retention_days = config.get_snapshot_retention_days()
+    result = storage.purge_expired(retention_days, date.today(), dry_run=dry_run)
+    _log_purge_result(result, dry_run)
+    return not result.failed
+
+
+def _log_purge_result(result: PurgeResult, dry_run: bool) -> None:
+    preview_note = "（dry-run，僅預覽不刪除）" if dry_run else ""
+    for path in result.deleted:
+        logger.info("清除快照/報告目錄%s：%s", preview_note, path)
+    for path in result.skipped_invalid_format:
+        logger.warning("目錄名稱非合法日期格式，略過不處理：%s", path)
+    for path, error in result.failed:
+        logger.warning("清除失敗，略過：%s（%s）", path, error)
+
+    logger.info(
+        "快照保留清除完成%s：截止日 %s，清除 %d 個、略過 %d 個、失敗 %d 個",
+        preview_note, result.cutoff_date, len(result.deleted), len(result.skipped_invalid_format), len(result.failed),
     )
 
 
@@ -167,6 +208,15 @@ def _log_etf_event(config: ConfigLoader, level: int, target_date: str, etf_id: s
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+
+    if args.purge:
+        try:
+            succeeded = run_purge(dry_run=args.dry_run)
+        except Exception:  # noqa: BLE001 - 進入點的最後防線，任何未預期例外都要被看見並記錄
+            logger.exception("執行清除時發生未預期例外")
+            return 1
+        return 0 if succeeded else 1
+
     try:
         target_date = _parse_target_date(args.date) if args.date else date.today().isoformat()
     except ValueError as exc:

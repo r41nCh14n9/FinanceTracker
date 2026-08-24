@@ -13,7 +13,7 @@
 ### 執行流程
 
 ```
-GitHub Actions Cron（週一~五 台灣 18:00）
+GitHub Actions Cron（週一~五 台灣 20:00）
         │
         ▼
    main.py（進入點）
@@ -117,7 +117,7 @@ FinanceTracker/
 
 3. **建立正式監控設定**：依實際需求編輯 `config/watchlist.json`（監控標的）、`config/thresholds.json`（門檻）、`config/broker_branches.json`（分點對照）、`config/recipients.json`（把範例收訊者換成實際 LINE User/Group ID，並將 `enabled` 設為 `true`），commit 進 repo。
 
-4. **確認排程時間**：`.github/workflows/daily-chip-monitor.yml` 預設 `cron: "0 10 * * 1-5"`（週一至週五 UTC 10:00 = 台灣 18:00），如需調整交易所收盤後緩衝時間可直接修改此 cron 表達式。
+4. **確認排程時間**：`.github/workflows/daily-chip-monitor.yml` 預設 `cron: "0 12 * * 1-5"`（週一至週五 UTC 12:00 = 台灣 20:00），如需調整交易所收盤後緩衝時間可直接修改此 cron 表達式。
 
 5. **手動補跑**：於 GitHub Actions 頁面對 `daily-chip-monitor.yml` 手動觸發（`workflow_dispatch`），可填入 `date` 參數補跑指定日期（例如假日後補跑，或某次執行失敗後重跑）。
 

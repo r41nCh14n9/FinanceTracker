@@ -2,8 +2,8 @@ name: 籌碼監控推播引擎
 
 on:
   schedule:
-    # 週一至週五 UTC 10:00 = 台灣時間 18:00
-    - cron: "0 10 * * 1-5"
+    # 週一至週五 UTC 12:00 = 台灣時間 20:00
+    - cron: "0 12 * * 1-5"
   workflow_dispatch:
     inputs:
       date:
@@ -46,6 +46,11 @@ jobs:
           fi
           echo "target_date=$TARGET_DATE" >> "$GITHUB_OUTPUT"
           python main.py --date "$TARGET_DATE"
+
+          # 跟上面的分析流程完全無關，單純清掉超過保留天數的舊快照/報告目錄；
+          # 這行失敗會讓這個 step 中止（沒接著跑 commit），失敗時 GitHub Actions
+          # 預設就會寄失敗通知信，不需要另外處理。
+          python main.py --purge
 
       - name: Commit snapshot data
         run: |

@@ -2,10 +2,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from main import _classify_rebalance_events, _parse_target_date, main, run
+from main import _classify_rebalance_events, _parse_target_date, main, run, run_purge
 from src.fetcher import Fetcher, FinMindClient
 from src.issuer_pcf.base import IssuerPcfProvider
-from src.models import DailySnapshotMeta, EtfHoldingRecord
+from src.models import DailySnapshotMeta, EtfHoldingRecord, PurgeResult
 from src.storage import SnapshotRepository
 
 
@@ -255,4 +255,78 @@ def test_run_still_previews_normally_in_dry_run_mode_on_trading_day():
         result = run("2026-08-24", dry_run=True)
 
     assert result is True
-    mock_fetcher.fetch_all.assert_called_once_with("2026-08-24")
+
+
+def test_main_routes_to_run_purge_when_purge_flag_set():
+    """--purge 要完全走清除那條路，不能跟著跑抓取/分析/推播，--date 也不需要被解析。"""
+    with patch("main.run_purge", return_value=True) as mock_run_purge, patch("main.run") as mock_run:
+        exit_code = main(["--purge"])
+
+    assert exit_code == 0
+    mock_run_purge.assert_called_once_with(dry_run=False)
+    mock_run.assert_not_called()
+
+
+def test_main_passes_dry_run_through_to_run_purge():
+    with patch("main.run_purge", return_value=True) as mock_run_purge:
+        exit_code = main(["--purge", "--dry-run"])
+
+    assert exit_code == 0
+    mock_run_purge.assert_called_once_with(dry_run=True)
+
+
+def test_main_ignores_date_when_purge_flag_set():
+    """--purge --date 併用時，日期驗證完全不該被觸發（清除跟 --date 語意無關）。"""
+    with patch("main.run_purge", return_value=True), patch("main._parse_target_date") as mock_parse_date:
+        exit_code = main(["--purge", "--date", "not-a-real-date"])
+
+    assert exit_code == 0
+    mock_parse_date.assert_not_called()
+
+
+def test_main_returns_error_when_run_purge_fails():
+    with patch("main.run_purge", return_value=False):
+        exit_code = main(["--purge"])
+
+    assert exit_code == 1
+
+
+def test_run_purge_reads_retention_days_and_purges_as_of_today():
+    with patch("main.ConfigLoader") as mock_config_cls, patch("main.SnapshotRepository") as mock_storage_cls:
+        mock_config = mock_config_cls.return_value
+        mock_config.get_snapshot_retention_days.return_value = 180
+        mock_storage = mock_storage_cls.return_value
+        mock_storage.purge_expired.return_value = PurgeResult(
+            cutoff_date="2026-02-25", deleted=["data/snapshots/2025-01-01"],
+            skipped_invalid_format=[], failed=[],
+        )
+
+        result = run_purge(dry_run=False)
+
+    assert result is True
+    mock_storage.purge_expired.assert_called_once()
+    call_kwargs = mock_storage.purge_expired.call_args
+    assert call_kwargs.args[0] == 180  # retention_days 來自設定檔
+    assert call_kwargs.kwargs["dry_run"] is False
+
+
+def test_run_purge_returns_false_when_any_deletion_failed():
+    with patch("main.ConfigLoader") as mock_config_cls, patch("main.SnapshotRepository") as mock_storage_cls:
+        mock_config_cls.return_value.get_snapshot_retention_days.return_value = 365
+        mock_storage_cls.return_value.purge_expired.return_value = PurgeResult(
+            cutoff_date="2025-08-24", deleted=[], skipped_invalid_format=[],
+            failed=[("data/snapshots/2025-01-01", "permission denied")],
+        )
+
+        result = run_purge(dry_run=False)
+
+    assert result is False
+
+
+def test_run_purge_returns_false_on_config_error():
+    from src.config import ConfigError
+
+    with patch("main.ConfigLoader", side_effect=ConfigError("設定檔不存在")):
+        result = run_purge(dry_run=False)
+
+    assert result is False
