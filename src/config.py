@@ -134,6 +134,16 @@ class ConfigLoader:
             mapping["issuer_internal_code"] = internal_code
         return mapping
 
+    def get_issuer_name(self, etf_id: str) -> str:
+        """回傳 ETF 對應投信的中文顯示名稱（例如「元大投信」），純粹給 log 訊息使用；
+        查無對照時退回 ETF 代碼本身，不拋例外，避免記 log 這種非關鍵路徑反而讓程式中斷。
+        """
+        issuer_key = self._etf_issuer_key.get(etf_id)
+        if issuer_key is None:
+            return etf_id
+        issuer = self._issuer_registry["issuers"].get(issuer_key, {})
+        return issuer.get("name", issuer_key)
+
     # --- 投信開放狀態（isEnabled feature flag）與可監控 ETF 清單 ---
     def get_enabled_issuers(self) -> dict[str, dict]:
         """回傳目前 isEnabled=true 的投信對照（鍵為投信代碼），供檢核或分流查詢使用。"""

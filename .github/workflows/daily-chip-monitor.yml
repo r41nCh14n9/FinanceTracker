@@ -29,21 +29,28 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run chip monitor
+        id: run
         env:
           FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
           LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
           LINE_CHANNEL_SECRET: ${{ secrets.LINE_CHANNEL_SECRET }}
         run: |
+          # 一律先把「這次實際要跑哪一天」算成一個明確的變數，而不是分別在跑
+          # main.py 跟寫 commit message 時各自重算一次——不然手動補跑指定日期時，
+          # commit message 會照樣寫成 workflow 執行當下的日期，跟資料實際代表的
+          # 日期對不上。
           if [ -n "${{ github.event.inputs.date }}" ]; then
-            python main.py --date "${{ github.event.inputs.date }}"
+            TARGET_DATE="${{ github.event.inputs.date }}"
           else
-            python main.py
+            TARGET_DATE="$(date +'%Y-%m-%d')"
           fi
+          echo "target_date=$TARGET_DATE" >> "$GITHUB_OUTPUT"
+          python main.py --date "$TARGET_DATE"
 
       - name: Commit snapshot data
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/
-          git diff --cached --quiet || git commit -m "chore: 更新籌碼快照資料 $(date +'%Y-%m-%d')"
+          git diff --cached --quiet || git commit -m "chore: 更新籌碼快照資料 ${{ steps.run.outputs.target_date }}"
           git push

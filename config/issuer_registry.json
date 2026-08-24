@@ -44,13 +44,10 @@
     },
     "allianz": {
       "name": "安聯投信",
-      "isEnabled": false,
+      "isEnabled": true,
       "adapter": "AllianzPcfAdapter",
-      "pcf_url_template": "https://etf.allianzgi.com.tw/etf-info/{issuer_internal_code}",
-      "etfs": ["00984A"],
-      "issuer_internal_codes": {
-        "00984A": "E0001"
-      }
+      "pcf_url_template": "https://etf.allianzgi.com.tw/webapi/api/Fund/GetFundAssets",
+      "etfs": ["00984A"]
     },
     "fuhwa": {
       "name": "復華投信",

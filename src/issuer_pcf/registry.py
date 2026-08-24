@@ -3,6 +3,7 @@
 """
 from __future__ import annotations
 
+from src.issuer_pcf.allianz import AllianzPcfAdapter
 from src.issuer_pcf.base import IssuerPcfProvider
 from src.issuer_pcf.capital import CapitalPcfAdapter
 from src.issuer_pcf.cathay import CathayPcfAdapter
@@ -20,4 +21,5 @@ ADAPTER_REGISTRY: dict[str, type[IssuerPcfProvider]] = {
     "CapitalPcfAdapter": CapitalPcfAdapter,
     "UniPcfAdapter": UniPcfAdapter,
     "FuhwaPcfAdapter": FuhwaPcfAdapter,
+    "AllianzPcfAdapter": AllianzPcfAdapter,
 }
