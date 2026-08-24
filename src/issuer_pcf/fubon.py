@@ -2,10 +2,18 @@
 以為的 Pcf.aspx，那支頁面顯示的其實是現金申購買回概況）。頁面上依序有期貨、股票、
 附買回債券三張長得一模一樣的表格，要抓的是「股票」標題後面那一張，抓錯就會混進期貨
 或債券部位。
+
+頁面其實吃一個簡單的網址查詢參數 `ddate`（不需要模擬 ASP.NET 表單回傳），查詢結果會
+印出「資料日期：YYYY/MM/DD」——這才是真正代表這批持股資料實際對應哪一天的欄位；
+頁面上另一個查詢日期欄位背後的隱藏欄位 hidSearchsDate 只是把查詢輸入原封不動印回來，
+不管那天有沒有資料都照樣顯示查詢日期本身，不能拿來驗證，之前誤用過一次要小心。
+查詢日期若不是交易日（週末、尚未發生的未來日期），站方會自動回退到最近一個有資料的
+交易日，「資料日期」欄位會誠實反映這件事，不會悄悄拿舊資料充數卻讓人以為是當天的。
 """
 from __future__ import annotations
 
 import logging
+import re
 
 import requests
 from bs4 import BeautifulSoup
@@ -16,24 +24,42 @@ logger = logging.getLogger(__name__)
 
 _REQUEST_TIMEOUT_SECONDS = 30
 _USER_AGENT = "FinanceTracker-ChipMonitor/1.0"
+_URL_TEMPLATE = "https://websys.fsit.com.tw/FubonETF/Trade/Assets.aspx"
 _STOCK_SECTION_TITLE = "股票"
 _SUMMARY_ROW_LABEL = "股票合計"
+_DATA_DATE_PATTERN = re.compile(r"資料日期[：:]\s*(\d{4})/(\d{1,2})/(\d{1,2})")
 
 
 class FubonPcfAdapter(IssuerPcfProvider):
-    _URL_TEMPLATE = "https://websys.fsit.com.tw/FubonETF/Trade/Assets.aspx?stkId={etf_id}&lan=TW"
+    SUPPORTS_BACKFILL = True
 
     def fetch_holdings(self, etf_id: str, snapshot_date: str) -> list[dict]:
-        # 這個頁面沒有像元大那樣可信賴的交易日期欄位可以比對，
-        # 目前先直接採用站方回傳的最新一筆資料，不做日期防呆。
-        html = self._fetch_html(etf_id)
+        html = self._fetch_html(etf_id, snapshot_date)
+
+        data_date = self._find_data_date(html)
+        if data_date != snapshot_date:
+            logger.warning(
+                "富邦 PCF 資料日期（%s）與查詢日期（%s）不符，視為當日尚未更新",
+                data_date, snapshot_date,
+            )
+            return []
+
         soup = BeautifulSoup(html, "html.parser")
         table = self._find_stock_table(soup)
         return self._parse_rows(table)
 
-    def _fetch_html(self, etf_id: str) -> str:
+    @staticmethod
+    def _find_data_date(html: str) -> str | None:
+        match = _DATA_DATE_PATTERN.search(html)
+        if match is None:
+            return None
+        year, month, day = match.groups()
+        return f"{int(year):04d}-{int(month):02d}-{int(day):02d}"
+
+    def _fetch_html(self, etf_id: str, snapshot_date: str) -> str:
         resp = requests.get(
-            self._URL_TEMPLATE.format(etf_id=etf_id),
+            _URL_TEMPLATE,
+            params={"stkId": etf_id, "ddate": snapshot_date.replace("-", ""), "lan": "TW"},
             headers={"User-Agent": _USER_AGENT},
             timeout=_REQUEST_TIMEOUT_SECONDS,
         )
