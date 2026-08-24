@@ -9,6 +9,7 @@ from src.issuer_pcf.capital import CapitalPcfAdapter
 from src.issuer_pcf.cathay import CathayPcfAdapter
 from src.issuer_pcf.fubon import FubonPcfAdapter
 from src.issuer_pcf.fuhwa import FuhwaPcfAdapter
+from src.issuer_pcf.kgi import KgiPcfAdapter
 from src.issuer_pcf.nomura import NomuraPcfAdapter
 from src.issuer_pcf.uni import UniPcfAdapter
 from src.issuer_pcf.yuanta import YuantaPcfAdapter
@@ -22,4 +23,5 @@ ADAPTER_REGISTRY: dict[str, type[IssuerPcfProvider]] = {
     "UniPcfAdapter": UniPcfAdapter,
     "FuhwaPcfAdapter": FuhwaPcfAdapter,
     "AllianzPcfAdapter": AllianzPcfAdapter,
+    "KgiPcfAdapter": KgiPcfAdapter,
 }

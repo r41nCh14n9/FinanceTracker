@@ -26,21 +26,21 @@
       "isEnabled": true,
       "adapter": "CapitalPcfAdapter",
       "pcf_url_template": "https://www.capitalfund.com.tw/CFWeb/api/etf/buyback",
-      "etfs": ["00919", "00982A"]
+      "etfs": ["00919", "00982A", "00992A"]
     },
     "nomura": {
       "name": "野村投信",
       "isEnabled": true,
       "adapter": "NomuraPcfAdapter",
       "pcf_url_template": "https://www.nomurafunds.com.tw/API/ETFAPI/api/Fund/GetFundAssets",
-      "etfs": ["00980A"]
+      "etfs": ["00980A", "00985A"]
     },
     "uni": {
       "name": "統一投信",
       "isEnabled": true,
       "adapter": "UniPcfAdapter",
       "pcf_url_template": "https://www.ezmoney.com.tw/ETF/Fund/AssetExcelNPOI",
-      "etfs": ["00981A"]
+      "etfs": ["00981A", "00403A"]
     },
     "allianz": {
       "name": "安聯投信",
@@ -55,6 +55,13 @@
       "adapter": "FuhwaPcfAdapter",
       "pcf_url_template": "https://www.fhtrust.com.tw/api/assets",
       "etfs": ["00991A", "00929"]
+    },
+    "kgi": {
+      "name": "凱基投信",
+      "isEnabled": true,
+      "adapter": "KgiPcfAdapter",
+      "pcf_url_template": "https://www.kgifund.com.tw/Fund/Detail?fundID={etf_id}",
+      "etfs": ["009816"]
     }
   }
 }
