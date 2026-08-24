@@ -6,7 +6,7 @@
 | 設計依據 | [SA-ETF換倉資料來源方案評估-投信官網爬蟲可行性分析.md](../../analysis/requirements/SA-ETF換倉資料來源方案評估-投信官網爬蟲可行性分析.md) |
 | 相關文件 | [SD-籌碼監控推播引擎-系統設計書.md](./SD-籌碼監控推播引擎-系統設計書.md)（原始 SD 文件，本文件**取代**其中 ETF PCF 資料來源相關設計）、[SD-三大法人買賣超關注清單通知-系統設計書.md](./SD-三大法人買賣超關注清單通知-系統設計書.md)（同批次既有異動，本次範疇不涉及三大法人／分點部分，二者互不影響） |
 | 對象讀者 | SD／開發人員／維護人員 |
-| 建立日期 | 2026-08-10（第二輪補充：2026-08-10；第三輪補充：2026-08-10；第四輪補充：2026-08-10；第五輪補充：2026-08-10；第六輪補充：2026-08-11；第七輪補充：2026-08-11；第八輪補充：2026-08-12；第九輪補充：2026-08-12；第十輪補充：2026-08-14；第十一輪補充：2026-08-14；第十二輪補充：2026-08-14；第十三輪補充：2026-08-17；第十四輪補充：2026-08-21；第十五輪補充：2026-08-24） |
+| 建立日期 | 2026-08-10（第二輪補充：2026-08-10；第三輪補充：2026-08-10；第四輪補充：2026-08-10；第五輪補充：2026-08-10；第六輪補充：2026-08-11；第七輪補充：2026-08-11；第八輪補充：2026-08-12；第九輪補充：2026-08-12；第十輪補充：2026-08-14；第十一輪補充：2026-08-14；第十二輪補充：2026-08-14；第十三輪補充：2026-08-17；第十四輪補充：2026-08-21；第十五輪補充：2026-08-24；第十六輪補充：2026-08-24） |
 | 作者 | Claude Code（依 Roy Chiang 確認之設計方向整理） |
 | 套件歸屬 | 既有專案 `FinanceTracker`，單一 Python 套件 `src/`；本次新增子套件 `src/issuer_pcf/` |
 
@@ -29,6 +29,7 @@
 | 第十三輪 | Roy Chiang 要求盤點「這個需求還差多少能完成實作」，逐項確認後動手處理三件事：<br>- **SA §六「解析健全性檢查機制」正式實作**：`Fetcher._fetch_etf_holdings()` 新增 `_is_holding_count_anomaly()`，把當天解析筆數跟前一交易日比對，跌幅達門檻（`thresholds.json.default.etf_holding_drop_pct`，預設 50%）視為投信網站改版造成的解析異常，不寫入快照。§四業務邏輯表原「解析結果基本健全性檢查」一列「不需新增邏輯，既有判斷式已涵蓋」的敘述**經本輪確認為不完整**（只擋得住剛好 0 筆的情況，擋不住「40 檔變 3 檔」這種劇烈但非 0 的殘缺資料），已更正為實際落地方案。<br>- **意外挖出並修正一個更嚴重的既有 bug**：手動驗證健全性檢查時發現，`main.py._classify_rebalance_events()` 直接把 `storage.read_etf_holdings(target_date, etf_id)` 的結果（檔案不存在時回傳 `[]`）當成「今天的真實持股」跟前一天比對——這代表只要某檔 ETF 當天**完全沒抓到資料**（例如元大／統一頁面「只顯示最新一天」的已知限制，查詢日期剛好不是頁面當下顯示的日期），就會被誤判成「持股歸零」，把該 ETF 原有的每一檔持股都當成「完全清倉」推播出去。這比「筆數驟降」的情境更嚴重，且在實測 8/17 資料時**真實觸發**（0050 當天因元大頁面日期不符沒抓到資料，觸發前 50 檔全部誤判清倉）。修正：`_classify_rebalance_events()` 改為 `curr_holdings` 為空時直接跳過該 ETF 的比對，不產生任何事件；已補上 `tests/test_main.py` 鎖住這個行為，並用 8/17 真實資料重跑 dry-run 確認不再誤報。<br>- **統一投信（Phase 3）正式實作開通**：確認 `AssetExcelNPOI`／`Fund/Index` 端點仍如文件記載正常運作，但技術複雜度明顯高於國泰/群益——回傳格式是真的 Excel（`.xlsx`）而非 JSON，需新增 `openpyxl` 套件依賴（經 Roy Chiang 確認採用）；需 `requests.Session()` 兩段式 Cookie 工作階段（先訪首頁）；持股表跟期貨/現金部位混在同一張工作表，需定位「股票」區塊；資料日期為民國年格式（如 `115/08/14`），需換算西元年才能跟 `snapshot_date` 比對。`UniPcfAdapter` 完成並正式開通（`isEnabled: true`，`watchlist.json` 加入 `00981A`）。<br>- **復華投信（Phase 3）確認為阻塞狀態，本輪未實作**：第六／七輪記錄的 `GET /api/assets?fundID=...` JSON 端點本輪實測**已失效**，回傳的是官網首頁 HTML 而非資料——復華官網已改版為 Vue.js SPA 架構（`data-template="index"`／`@vue:mounted` 等屬性），且持股明細頁未見任何 SSR 內嵌狀態（不像元大的 `__NUXT__` 可取巧），純前端渲染，靜態請求看不到實際資料。`etf_list` 列表頁本身還在、ticker↔`fundID` 對照連結格式還找得到（`/ETF/etf_detail/ETF23`），但沒有底層 API 可用。這是 SA 文件當初提醒的「投信網站改版讓 adapter 靜默失效」在**開發前**就先發生的例子。經 Roy Chiang 確認**擱置**，待有人以瀏覽器開發者工具重新查得新版底層 API（比照國泰/群益的模式）才能重啟評估，§六新增 #22 追蹤 |
 | 第十四輪（本次補充，⚠️ 更正上一輪誤判） | Roy Chiang 提供瀏覽器開發者工具查得的兩支復華候選端點（`GET /api/fundList`、`GET /api/ETFPcf?fundID=...&pcfDate=...`）要求複查是否可用，逐一實測後**發現並更正第十三輪的錯誤結論**：<br>- **`GET /api/fundList`**：✅ 確認可行，`result[]` 含 107 檔基金完整清單，`fundID`↔`etf002`（市場代碼）對照，已交叉驗證 `ETF21↔00929`、`ETF23↔00991A` 與既有記錄一致，可取代舊版 `etf_list` HTML 頁面爬取。<br>- **`GET /api/ETFPcf`**：⚠️ 端點本身正常（`ETF01/006207` 測試回傳 250 檔真實持股），但對本次目標 `ETF21`（00929）／`ETF23`（00991A）**在任何日期皆回空陣列**（測試橫跨 8/1～8/20 超過兩個月皆同），研判此端點是「實物申購買回籃」專用，00929／00991A 屬主動式 ETF、走現金基礎申贖，本來就沒有實物籃可揭露，非端點失效。<br>- **重大更正**：比對過程中意外發現第十三輪判定「復華官網已改版為 Vue.js SPA、原 `GET /api/assets?fundID=...` 端點已失效」**是誤判**——當時測試用 `qDate=2026-08-14`（連字號格式），本輪改用 `qDate=2026/08/20`（斜線格式）重測，**端點正常回傳完整 JSON**，取回 50 檔真實持股（`detail[]` 陣列篩 `ftype=="股票"`）。真正原因是站方對 `qDate` 參數格式要求嚴格，格式不符時**不會報錯，只會默默回傳官網首頁 HTML**，容易誤判成「網站改版、API 失效」——第十三輪正是誤踩這個陷阱，而非復華官網真的改版。§一「受支援投信範圍評估」復華投信技術可行性由「阻塞」更正回「可行」；§六 #22 更正解除。經 Roy Chiang 確認後**實作並正式開通**：`FuhwaPcfAdapter` 完成、`issuer_registry.json.fuhwa.isEnabled` 改為 `true`、`watchlist.json.etfs` 加入 `00991A`，並以正式環境即時查證（含前後兩交易日）確認資料正確 |
 | 第十五輪（本次補充，✅ 推翻第五輪 JS SPA 阻塞判斷） | Roy Chiang 以 Postman 查得安聯投信官網（`etf.allianzgi.com.tw`）獨立 `webapi` 後端子路徑三支端點：`GET /webapi/api/AntiForgery/GetAntiForgeryToken`（取得 CSRF token，同時透過 `Set-Cookie` 建立 `.AspNetCore.Antiforgery.*` 工作階段 Cookie）、`POST /webapi/api/Fund/GetFundOverview`（安聯旗下全部基金清單，含 `CFundNo`↔`CSecuritiesCode` 對照，本次實測 `TotalItems=4`，含 `E0001↔00984A`）、`POST /webapi/api/Fund/GetFundAssets`（`{FundID}` 查詢指定基金成分股，本次實測 `FundID=E0001` 正常回傳）；後兩者呼叫皆須於 Header 帶入前一步取得的 `x-xsrf-token`（ASP.NET Core Antiforgery 雙提交模式，token 值＋對應 Cookie 需同時送出，`requests.Session()` 可自動處理 Cookie 部分）。**第五輪「JS 前端動態渲染 SPA、無法取得資料」的悲觀判斷本輪正式推翻**——與野村（第六輪）、國泰（第十輪）、群益（第十二輪）同一類案例：靜態請求拿不到內容的是「前端頁面」，但頁面背後呼叫的獨立 `webapi` 後端本身是乾淨可用的 JSON API；`GetFundOverview` 同時解決「ticker↔內部代碼」對照問題，比照野村/國泰/群益/復華模式，**不需人工維護靜態對照表**，可於 Adapter 啟動時動態查詢。⚠️ 唯一新發現的差異點：`GetFundAssets` 回應為「多區塊表格」格式（`TableTitle`／`Columns`／`Rows`，本次實測看到至少「股票 (95.49%)」一個區塊，`Columns` 為 `{Name, TextAlign}` 物件陣列、疑似對應位置索引式的 `Rows`，而非其餘投信慣用的具名鍵值物件陣列），與富邦「同頁多張表格需鎖定『股票』區塊」屬同一類陷阱，但欄位存取方式（位置索引 vs 具名鍵）為本次查證中首次出現的新樣式，完整 `Rows` 陣列結構本輪僅看到欄位定義、尚未看到列資料本身，列為 §六 新增待確認事項。經本輪查證，**安聯投信技術可行性由「高（🔴 SPA 阻塞，無底層 API）」下修為「低～中」**，與國泰／群益同級；是否比照國泰/群益/復華模式提前實作 `AllianzPcfAdapter` 並開通，**本次僅記錄查證結果，尚未實作**，`issuer_registry.json.allianz.isEnabled` 維持 `false`，留待 Roy Chiang 確認 |
+| 第十六輪（本次補充，新增查證：凱基投信，因 `009816` 而起） | 使用者提出新增 `009816`（凱基台灣TOP50，凱基投信發行）之籌碼監控需求，先於 [SA-凱基投信PCF資料來源評估-009816籌碼監控可行性分析.md](../../analysis/requirements/SA-凱基投信PCF資料來源評估-009816籌碼監控可行性分析.md) 確認凱基投信為全新查證機構、PCF 頁面（`kgifund.com.tw/Fund/RedemptionList?fundNo=J023`）用 `WebFetch` 查證時只看到「Loading...」框架，判定為疑似前端動態載入。使用者本輪改用瀏覽器 F12 實測**基金明細頁**（`/Fund/Detail?fundID=J023`，非上一輪查證的 `RedemptionList` 頁）之 Network 分頁，**未攔截到任何回傳持股資料的 XHR/Fetch API**，因而提出評估「透過前端畫面爬蟲」的方案——此方案若走 Headless Browser（Playwright/Selenium）路線，將牴觸本文件 §一「不使用 Headless Browser，維持批次腳本輕量化」之既定架構原則，比照既有 §六 #20（`YuantaPcfAdapter` 當初三選項中 Roy Chiang 明確否決 Headless Browser）之決策先例，屬於需要 Roy Chiang 重新拍板的架構層級決定。**本輪在建議走 Headless Browser 之前，先複查是否為「SSR 完整內嵌資料，只是沒有獨立 API」的情況**（同元大 `window.__NUXT__`、富邦/野村靜態表格的既有模式）：以 `WebFetch` 直接 GET `/Fund/Detail?fundID=J023`（不執行任何 JS 的純 HTTP 請求），逐字元查證回應內容，**確認完整持股表格（股票代號／名稱／股數／權重%，含 `2330` 台積電 41.77%、`2883` 凱基金 1.65% 等至少 14 筆真實數據，且包含發行方自家股票凱基金這種高度特定的數值，可排除小模型摘要幻覺之可能）已存在於原始伺服器回應中，且回應內未見任何 `<script>` 標籤或 `window.__` 系列前端框架狀態變數**——研判這頁很可能是**傳統伺服器端渲染（SSR）**，資料直接烘焙進初始 HTML，並非透過額外 AJAX 呼叫載入；使用者 F12 之所以看不到「後端 API」，合理解釋是資料本來就隨著該頁面本身的 Document 請求一起回傳，並不存在另一支獨立 API 可供攔截，而非真的需要靠瀏覽器執行 JS 才能取得資料。**若此判斷經使用者以瀏覽器「檢視網頁原始碼」（Ctrl+U，而非開發者工具的 Elements/Network 分頁）複驗屬實，`KgiPcfAdapter` 可望比照富邦／野村模式，用最輕量的 `requests` + `BeautifulSoup` 靜態表格解析即可完成，完全不需要引入 Headless Browser**，本次評估結論為「暫不建議走前端爬蟲／Headless Browser 路線，先以「檢視原始碼」複驗 SSR 假說」，尚有 3 項細節待確認（頁面預設分頁與「持股」分頁籤資料是否為同一份、日期查詢參數是否對持股表格生效／是否只能查當日、是否已完整收錄全部成分股或有分頁截斷），詳見本輪新增之 §六 待確認事項與 §一新增段落 |
 
 ### 與 SA 文件的關鍵差異對照
 
@@ -86,6 +87,7 @@ SA 文件第六章列出多項待確認事項，本文件為對應決策結果�
 | 永豐投信 | **（🔴 第五輪新發現，重大利多）** Path 參數：`https://sitc.sinopac.com/SinopacEtfs/Etfs/SinglePcf/{etf_id}` | ✅ **可直接用 ticker**（已用 `00410A` 實測確認，頁面標題自我驗證對應正確 ETF） | **低（🟢 第五輪由「未查明」上修為與元大／富邦同等級的低複雜度）**，靜態 HTML 完整表格＋日期，30 檔個股清楚列出 | 待評估（**技術可行性已確認為高，若未來有明確監控標的可快速納入開發**，見 §六） |
 | 街口投信 | ~~`etf.skit.com.tw/Home/Pcf`~~ | ❓ 未查明 | **高（🔴 第五輪新發現：該網域 DNS 查詢失敗，網站可能已下線或搬遷，需重新查找現況網址）** | 待評估，無明確標的，不排入時程 |
 | 中信投信 | `ctbcinvestments.com.tw/Etf/List`（總覽頁）、`ctbcinvestments.taipei/Product/ETFDetail/{數字ID}`（個別 ETF，⚠️ `.taipei` 網域憑證與官方網域不符，應避免使用） | ❓ 未查明 | **高（🔴 第五輪新發現：`.com.tw` 網域頁面亦為 JS 前端動態渲染 SPA，靜態請求無法取得實際內容；`.taipei` 網域另有憑證不符問題，不建議採用）** | 待評估，無明確標的，不排入時程 |
+| 凱基投信 | Query 參數（內部代碼）：`https://www.kgifund.com.tw/Fund/Detail?fundID={內部代碼}`（例：`009816` 對應 `fundID=J023`）；PCF 專屬頁 `/Fund/RedemptionList?fundNo={內部代碼}` 經查為前端動態載入空殼，**`/Fund/Detail` 頁已複驗確認為 SSR，可直接取得完整持股表格** | ⚠️ 需 `fundID` 內部代碼，**尚未查得動態對照端點（不同於野村/國泰/群益/安聯/復華模式），本輪僅查得 `009816↔J023` 單筆範例** | **低（🟢 第十六輪查證＋使用者 `view-source:` 複驗：`/Fund/Detail` 頁 `<table name="content">` 列即為完整持股資料，`requests`＋`BeautifulSoup` 即可解析，中文欄位為 HTML 數值字元參照編碼但 `BeautifulSoup` 會自動解碼，不需額外處理，不需要 Headless Browser；⚠️ 日期查詢／完整檔數／分頁籤資料歸屬 3 項細節尚待確認，見 §六 #27～#28）** | 待評估（技術可行性已確認為高，是否排入 Phase 待 Roy Chiang 確認） |
 
 **第三輪新發現（富邦投信技術風險，需誠實記錄）：** 第二輪僅以「無 `stkId` 參數」的頁面查證過富邦格式，該次查得的表格內容實際上可能對應到別檔基金；本輪改用富邦自家 ETF `006208`（富邦台灣釆吉50）帶入正確 `stkId` 重新查證，確認 **URL 參數機制正確生效**（頁面標題顯示「006208 富邦台灣釆吉50」、且有「查詢日期：2026/08/10」欄位），但頁面呈現的是**現金申購買回概況資訊**（基金淨資產價值、已發行受益權單位數、每受益權單位淨資產價值等），**並未直接看到成分股「股票實物申贖」明細表**——與元大頁面「一開就是完整成分股表格」的情況不同。這代表富邦的成分股清單可能位於同頁面的其他分頁籤、另一個頁面，或透過 AJAX 動態載入，實際位置**本輪尚未查明**，已列為 §六 待確認事項第 1 順位，**`FubonPcfAdapter` 本次僅設計外部介面與註冊機制，內部解析邏輯待此風險釐清後才能真正完工**（見 §四）。
 
@@ -126,6 +128,10 @@ SA 文件第六章列出多項待確認事項，本文件為對應決策結果�
 - **復華投信**技術複雜度由「未查明」修正為**「中」**（需 `fundID` 對照表，但一旦對照確立，API 本身乾淨可靠）。
 - **統一投信**技術複雜度由「高（重導向錯誤）」修正為**「中」**（Cookie 機制對 `requests.Session()` 而言是常規處理、非阻礙；仍需 `fundCode` 對照表）。
 - **中信投信**應由「待評估，規則未查明」明確改列為**「不可行」**，兩者性質不同——前者代表「還沒查」，後者代表「查過了、技術路徑不通」，避免未來又重複投入時間查證同一件已有結論的事。
+
+**第十六輪新增（凱基投信，因 `009816` 而起，優先複查 SSR 假說、暫緩 Headless Browser 提案）：** 使用者以 F12 實測凱基投信基金明細頁（`/Fund/Detail?fundID=J023`）Network 分頁，未見任何回傳持股資料的 API 呼叫，因而提出「透過前端畫面爬蟲」的方案評估——若指的是 Playwright/Selenium 等 Headless Browser，將是本文件 §一「不使用 Headless Browser」原則自 §六 #20（元大 `YuantaPcfAdapter` 選型時 Roy Chiang 已明確否決此選項）以來首次被重新提出挑戰。本輪在建議此架構層級變更之前，先用 `WebFetch` 對同一頁面發出**純 HTTP GET（不執行任何 JS）**查證，結果**逐字元確認完整持股表格（`2330` 台積電 41.77%、`2883` 凱基金 1.65% 等至少 14 筆，含發行方自家股票這種高度特定數值，可排除通用知識幻覺）已存在於原始回應內**，且回應中**沒有任何 `<script>` 標籤或 `window.__` 系列前端框架狀態變數**——這與元大／富邦／野村已知的「SSR 頁面」特徵相符，而非安聯／野村最初被誤判的「純前端渲染 SPA」特徵。**推論使用者 F12 找不到 API 的原因，很可能是資料本來就隨頁面本身的 Document 請求一次回傳、根本不存在獨立 API 可供攔截，而非真的需要瀏覽器執行 JS 才能取得資料**（F12 的 Network 分頁若僅篩選 XHR/Fetch 類型，會漏看 Document 類型請求本身已經帶有完整資料的情況）。**本輪結論：暫緩「前端爬蟲／Headless Browser」提案，建議使用者先以瀏覽器「檢視網頁原始碼」（Ctrl+U，而非開發者工具的 Elements 分頁——Elements 顯示的是 JS 執行後的 DOM，會與原始回應混淆）複驗此頁面是否真的在原始回應就含完整表格；若複驗屬實，`KgiPcfAdapter` 可望比照富邦／野村的最輕量作法（`requests` + `BeautifulSoup` 解析靜態表格），完全不需要引入 Headless Browser，也不需要如元大那樣額外引入 Node.js 子行程。**
+
+**同輪複驗結果（使用者以 `view-source:` 複查，SSR 假說確認成立）：** 使用者以瀏覽器「檢視網頁原始碼」直接查看 `https://www.kgifund.com.tw/Fund/Detail?fundID=J023` 之原始 HTTP 回應（非開發者工具 Elements 分頁），確認 `<table class="js-table-a-0 responsive-table responsive-table--sm">` 內 `<tbody>` 逐列（`<tr name="content">`）即為完整持股資料，`<td>` 依序對應股票代碼／名稱／股數／權重%（如 `2330`／`&#x53F0;&#x7A4D;&#x96FB;`／`31,956,000`／`41.77`），**正式確認為傳統伺服器端渲染（SSR），§六 #26 解除**。附帶發現：頁面中文（含表頭「股票代碼」「股票名稱」等與內容）以 HTML 數值字元參照編碼（如「台積電」寫成 `&#x53F0;&#x7A4D;&#x96FB;`），`BeautifulSoup` 解析時會自動解碼還原，不需額外處理；使用者原先以明碼中文「凱基金」搜尋原始碼查無結果，純粹是因為原始碼是編碼後文字、並非資料消失或動態載入，不影響本輪「SSR、不需 Headless Browser」之結論。**`KgiPcfAdapter` 技術路徑已確認可行，可比照 `FubonPcfAdapter`／`NomuraPcfAdapter` 最輕量作法（`requests` + `BeautifulSoup`）設計**，尚餘 §六 #27～#29（完整檔數／分頁籤資料歸屬／日期查詢範圍／服務條款）待確認後可正式定案。
 
 **第七輪新增（Roy Chiang 追加提供野村／統一／復華之「取得 ETF 列表」端點與統一之修正端點，逐一實測結果）：**
 
@@ -583,6 +589,64 @@ GET https://websys.fsit.com.tw/FubonETF/Trade/Assets.aspx?stkId=006208&lan=TW
 
 **失敗／需視為 NO_DATA 的情境：** 比照元大 Adapter（HTTP 逾時/非 200 → `ERROR`；找不到「股票」標題或表格結構改變 → `FETCH_ISSUER_PCF_PARSE_ERROR`）。
 
+### API 契約（第十六輪定案：凱基投信 PCF 資料）
+
+| # | 服務 | Method / Endpoint | 用途 | 呼叫方 | 認證方式 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 4 | 凱基投信官網 | `GET https://www.kgifund.com.tw/Fund/Detail?fundID={內部代碼}`（`fundID` 為投信內部代碼，非市場代碼；`009816` 對應 `J023`） | 取得指定 ETF 當日成分股明細（HTML 頁面，SSR，內含多個資產分頁籤區塊） | `KgiPcfAdapter` | 免金鑰，公開頁面 |
+
+**Request 範例（已實測，`009816` 凱基台灣TOP50）：**
+```
+GET https://www.kgifund.com.tw/Fund/Detail?fundID=J023
+```
+
+**回應內容（SSR 靜態 HTML，`<h4>股票</h4>` 標題後方表格節錄，已複驗共 50 檔完整股票，此處僅列前 2 檔；中文為 HTML 數值字元參照編碼）：**
+```html
+<div class="fund-asset__asset fund-asset__asset--desktop-none">
+  <h4 class="fund-asset__sub-title">&#x80A1;&#x7968;</h4>  <!-- 股票 -->
+  <div class="responsive-table-wrap" style="margin-bottom:20px;">
+    <table class="js-table-a-0 responsive-table responsive-table--sm">
+      <thead>
+        <tr>
+          <th>&#x80A1;&#x7968;&#x4EE3;&#x78BC;</th>  <!-- 股票代碼 -->
+          <th>&#x80A1;&#x7968;&#x540D;&#x7A31;</th>  <!-- 股票名稱 -->
+          <th>&#x80A1;&#x6578;</th>                   <!-- 股數 -->
+          <th>&#x6B0A;&#x91CD;(%)</th>                <!-- 權重(%) -->
+        </tr>
+      </thead>
+      <tbody>
+        <tr name="content">
+          <td>2330</td><td>&#x53F0;&#x7A4D;&#x96FB;</td><td>31,956,000</td><td>41.77</td>
+        </tr>
+        <tr name="content">
+          <td>2454</td><td>&#x806F;&#x767C;&#x79D1;</td><td>2,600,000</td><td>5.39</td>
+        </tr>
+        ...
+      </tbody>
+    </table>
+  </div>
+</div>
+```
+
+**Adapter 內部解析後回傳格式（與其餘 Adapter 一致）：**
+```json
+[
+  {"component_stock_id": "2330", "component_name": "台積電", "holding_shares": 31956000},
+  {"component_stock_id": "2454", "component_name": "聯發科", "holding_shares": 2600000}
+]
+```
+
+**解析注意事項（第十六輪查明）：**
+- `BeautifulSoup` 解析 `.text`／`.get_text()` 時會自動將 `&#x53F0;` 等 HTML 數值字元參照解碼為正常中文字串，**不需要額外的 HTML entity 解碼邏輯**。
+- 解析器須先定位 `<h4 class="fund-asset__sub-title">股票</h4>` 標題節點，再取其後方緊接的 `<table>`（比照 `FubonPcfAdapter` 用 `<h6>股票</h6>` 定位表格的既有模式），不可假設頁面只有一張表格——`class="fund-asset__asset fund-asset__asset--desktop-none"` 之命名暗示頁面可能存在對應的行動版/桌面版雙重區塊（響應式設計常見手法），**若解析後筆數超過 50 筆或出現重複股票代碼，需先排查是否誤抓了重複的響應式區塊**，可用「依 `component_stock_id` 去重」作為防禦性處理。
+- 完整 50 檔成分股資料已確認**一次性存在於原始 HTTP 回應內**（使用者以 `view-source:` 複驗），不需另尋展開後的 AJAX 端點，也不需 Headless Browser 或 Node.js 子行程。
+- **不支援日期查詢**（使用者已實測頁面日期範圍選擇器對此表格無效）：`KgiPcfAdapter.SUPPORTS_BACKFILL` 維持基底類別預設值 `False`，僅能取得當日資料；若某交易日抓取當下網站尚未更新，暫無官方日期欄位可比對，解析器需改以「回應中是否能定位到 `<h4>股票</h4>` 表格且列數 > 0」作為成功判斷依據，取不到則回傳空清單交由 `Fetcher` 標記 `NO_DATA`（不可誤判為 `ERROR`）。
+
+**失敗／需視為 NO_DATA 或 ERROR 的情境：**
+- HTTP 逾時／非 200 回應 → 拋出例外，標記 `status=ERROR`。
+- 找不到 `<h4>股票</h4>` 標題節點或其後無 `<table>` → 標記 `status=ERROR`（`FETCH_ISSUER_PCF_PARSE_ERROR`），可能為網站改版。
+- 表格存在但列數為 0 → 回傳空清單，`Fetcher` 既有邏輯視為 `NO_DATA`。
+
 ### 時序圖：ETF PCF 抓取流程（更新，僅本次異動範圍）
 
 ```mermaid
@@ -682,6 +746,10 @@ sequenceDiagram
 | 23（第十三輪新增，✅ 已解除） | ~~SA 文件「解析健全性檢查機制」（成分股數量驟降/劇烈變化時標記警示）未實作；`main.py._classify_rebalance_events()` 在 ETF 當天無資料時會誤把 `[]` 當成「持股歸零」，把既有持股全部誤判成清倉事件~~ | 開發人員 | **已解除（第十三輪）：`Fetcher._is_holding_count_anomaly()` 已實作（跌幅 ≥50% 視為解析異常不寫入）；`main.py._classify_rebalance_events()` 已修正為 `curr_holdings` 為空時跳過比對，不產生事件。已用 8/17 真實資料重現原始問題（0050 誤判 50 檔清倉）並驗證修正後不再誤報，另補 `tests/test_main.py`／`tests/test_fetcher.py` 鎖住行為** |
 | 24（第十五輪新增，✅ 實作階段解除） | ~~安聯投信 `GetFundAssets` 回應之完整 `Rows` 陣列結構、`Columns` 與 `Rows` 之位置索引對應關係（哪一欄是股票代號／股票名稱／股數／權重）、是否有「合計」列需排除、是否有查詢日期參數或僅回傳最新交易日資料，本輪僅查得 `Columns` 欄位定義（`TableTitle: "股票 (95.49%)"`），未看到完整列資料~~ | 開發人員 | **已解除（實作階段）：直接呼叫正式環境取得完整真實回應，確認頂層信封為 `{Entries:{FundID, Data:{FundAsset, Table}}}`（與 `GetFundOverview` 同一種信封格式），`Table` 為 3 張表格（無標題資產總覽表、「股票 (95.49%)」、「期貨」），股票表格欄位為「序號／股票代號／股票名稱／股數／權重(%)」，`Rows` 為位置索引陣列，結構與野村 `GetFundAssets` 之 `Table.Columns`/`Table.Rows` 幾乎一致；無查詢日期參數，僅回傳最新一期資料；無「合計」列需排除。**⚠️ 額外發現**：無標題資產總覽表的列資料裡本身有一格字面值就是「股票」二字（資產類別小計，非成分股），若靠掃描儲存格內容找表格會誤判，必須靠 `TableTitle` 判斷，與富邦/群益/野村已知陷阱同一類，已寫入 `AllianzPcfAdapter` 並補測試鎖住。`AllianzPcfAdapter` 已依此正式實作並開通，見附註 |
 | 25（第十五輪新增，✅ 實作階段解除） | ~~安聯 Antiforgery token 之 `maxAgeSeconds`（本次實測為 86400 秒＝24 小時）是否足夠支撐單次批次執行（每交易日一次，理論上足夠），以及 token／Cookie 是否需要每次執行重新取得，或可在同一次批次執行的多次請求間重複使用~~ | 開發人員 | **已解除（實作階段）：`Data.FundAsset.PCFDate`（`yyyy/MM/dd`）即為該批持股資料實際對應的交易日，可直接跟 `snapshot_date` 比對，等同其餘投信的日期防呆機制，不需要額外處理 token 快取；token／Cookie 採「每次呼叫 `fetch_holdings()` 重新取得一次」的簡單作法，每交易日僅呼叫一次，效能影響可忽略，暫不做跨次重用** |
+| 26（第十六輪新增，✅ 同輪解除） | ~~凱基投信 `/Fund/Detail?fundID=J023` 頁面是否真為 SSR~~ | 使用者／Roy Chiang | **已解除：使用者以瀏覽器 `view-source:` 檢視網頁原始碼複驗，確認 `<table class="js-table-a-0 responsive-table responsive-table--sm">` 內 `<tbody><tr name="content">` 逐列即為完整持股資料（`<td>2330</td>`／`<td>&#x53F0;&#x7A4D;&#x96FB;</td>`／`<td>31,956,000</td>`／`<td>41.77</td>` 依序對應股票代碼／名稱／股數／權重%），確認為傳統 SSR，非 Headless Browser 才能取得，`KgiPcfAdapter` 可比照富邦／野村模式用 `requests` + `BeautifulSoup` 靜態解析。⚠️ **附帶發現**：頁面中文字（含表格標題與內容）以 HTML 數值字元參照編碼（如「台積電」寫成 `&#x53F0;&#x7A4D;&#x96FB;`），這是標準 HTML 編碼慣例，`BeautifulSoup` 解析 `.text` 屬性時會自動解碼還原為正常中文字串，**不需要額外處理**；此發現同時解釋了 §一 `WebFetch` 查證時「未見 `<script>` 標籤」的判斷方式若換成人工用瀏覽器 Ctrl+F 搜尋明碼中文（如「凱基金」）會查無結果的原因——並非資料消失或動態載入，純粹是明碼搜尋比對不到已編碼文字，之後撰寫解析器或人工複驗時應改用股票代碼（如 `2330`）或搜尋 `name="content"` 等結構特徵，避免重蹈此誤判** |
+| 27（第十六輪新增，✅ 同輪解除） | ~~該頁面完整成分股清單是否已一次性全部存在於原始 HTML~~ | 使用者 | **已確認：使用者以瀏覽器複驗，`view-source:` 原始碼內確實完整列出 50 檔成分股（`009816` 追蹤 TOP 50 指數），非「前 N 大摘要」，也無分頁/截斷，`KgiPcfAdapter` 解析原始 HTML 即可取得完整清單，不需額外的展開/AJAX 呼叫，同元大「完整資料早已在原始回應、僅前端顯示筆數受 CSS 控制」的模式（§六 #3），但凱基比元大更單純——不需 Node.js 子行程解析 SSR 狀態，純表格 `BeautifulSoup` 解析即可** |
+| 28（第十六輪新增，✅ 同輪解除） | ~~日期範圍選擇器是否連動持股表格~~ | 使用者 | **已確認：使用者實測日期查詢對持股表格無效，僅能取得當日資料。`KgiPcfAdapter.SUPPORTS_BACKFILL` 定為 `False`（沿用基底類別預設值，比照國泰/群益/野村/統一/復華/安聯多數投信之既有慣例），Fetcher 僅在排程當天呼叫，不支援回補歷史日期** |
+| 29（第十六輪新增） | 凱基投信官網 `kgifund.com.tw` 之 `robots.txt`（已於 [SA-凱基投信PCF資料來源評估-009816籌碼監控可行性分析.md](../../analysis/requirements/SA-凱基投信PCF資料來源評估-009816籌碼監控可行性分析.md) 查得全站無 `Disallow`，初步無疑慮）與服務條款全文，比照既有 §六 #1／#21 之處理方式，列為上線前人工確認項，非動工前阻塞項 | Roy Chiang | 待確認（非阻塞） |
 
 ---
 
@@ -765,6 +833,11 @@ sequenceDiagram
   - 安聯投信 CSRF Token API（✅ 實測成功，`HTTP 200`，並透過 `Set-Cookie` 建立 Antiforgery Cookie）：`GET https://etf.allianzgi.com.tw/webapi/api/AntiForgery/GetAntiForgeryToken`
   - 安聯投信基金清單 API（✅ 實測成功，`TotalItems=4`，含 `CFundNo=E0001↔CSecuritiesCode=00984A` 對照，需帶 `x-xsrf-token`）：`POST https://etf.allianzgi.com.tw/webapi/api/Fund/GetFundOverview`（Body：`{"Keyword":"","FundNo":"","FundType":-1,"PageSize":999,"PageIndex":1}`）
   - 安聯投信成分股明細 API（✅ 實測成功，`FundID=E0001`，回應為多區塊表格格式，需帶 `x-xsrf-token`；完整 `Rows` 資料本輪未完整查看，見 §六 #24）：`POST https://etf.allianzgi.com.tw/webapi/api/Fund/GetFundAssets`（Body：`{"FundID":"E0001"}`）
+- 查證來源（第十六輪，凱基投信 `009816`，`/Fund/Detail` 頁 SSR 假說查證）：
+  - [SA-凱基投信PCF資料來源評估-009816籌碼監控可行性分析.md](../../analysis/requirements/SA-凱基投信PCF資料來源評估-009816籌碼監控可行性分析.md)（本輪前置查證，含 `009816↔J023` 對照、`RedemptionList` 頁為空殼、`robots.txt` 無限制之查證結果）
+  - 凱基投信 ETF 總覽頁：`GET https://www.kgifund.com.tw/Home/ETF`
+  - 凱基投信基金明細頁（✅ 純 HTTP GET 即查得完整持股表格，判斷為 SSR，`fundID=J023` 對應 `009816`）：`GET https://www.kgifund.com.tw/Fund/Detail?fundID=J023`
+  - 使用者本輪以瀏覽器 F12 對同一頁面複查（Network 分頁未見持股資料 API），與本輪 `WebFetch` 查證結果之解讀差異，見 §一第十六輪新增段落
 
 ---
 
@@ -782,5 +855,6 @@ sequenceDiagram
 | `UniPcfAdapter` | `ezmoney.com.tw/ETF/Fund/Index`＋`AssetExcelNPOI` | HTTP＋Cookie Session，`fundCode` 動態查詢，回應為 Excel（`openpyxl` 解析，見 §一第十三輪） | ✅ 已實作並開通（`watchlist.json` 含 `00981A`） |
 | `FuhwaPcfAdapter` | `fhtrust.com.tw/api/fundList`＋`api/assets` | HTTP JSON API，`fundID` 動態查詢，持股在 `detail[]`（篩 `ftype=="股票"`）；`qDate` 須用 `yyyy/MM/dd` 斜線格式（見 §一第十四輪） | ✅ 已實作並開通（`watchlist.json` 含 `00991A`） |
 | `AllianzPcfAdapter` | `etf.allianzgi.com.tw/webapi/api/Fund/GetFundOverview`＋`GetFundAssets`（需先呼叫 `GetAntiForgeryToken`） | HTTP JSON API，`CFundNo` 動態查詢，需 Antiforgery token/Cookie 雙提交，持股在 `Entries.Data.Table` 中 `TableTitle` 以「股票」開頭的區塊（位置索引式 `Rows`，見 §一第十五輪、§六 #24） | ✅ 已實作並開通（`watchlist.json` 含 `00984A`） |
+| `KgiPcfAdapter` | `kgifund.com.tw/Fund/Detail?fundID={內部代碼}` | HTTP GET＋`BeautifulSoup` 解析 SSR 靜態表格（`<h4>股票</h4>` 定位表格），`fundID` 靜態對照（尚無動態清單端點），依 `component_stock_id` 去重響應式重複區塊；不支援日期查詢，`SUPPORTS_BACKFILL=False`（見 §一第十六輪） | ✅ 已實作並開通（`watchlist.json` 含 `009816`） |
 
 §六 #1／#21「服務條款全文之法律判斷」第十一輪已由 Roy Chiang 確認定案，不再是待辦項；§六 #23「解析健全性檢查機制」與其連帶發現的換倉比對誤報 bug 已於第十三輪解除；§六 #22「復華官網改版」第十四輪確認為誤判並更正解除；§六 #9／#12／#24／#25「安聯投信底層 API 與回應結構」第十五輪查得並於實作階段完整驗證，見上方異動歷程。**Phase 3 觀察名單四家投信（野村／統一／安聯／復華）現已全數實作並開通**，Phase 3「觀察名單、不承諾時程」之定位已於實務上完成，僅永豐／街口／中信因無明確標的或技術受阻維持未排入。
