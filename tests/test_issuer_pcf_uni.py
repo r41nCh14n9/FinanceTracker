@@ -1,7 +1,7 @@
-import io
+import html
+import json
 from unittest.mock import MagicMock, patch
 
-import openpyxl
 import pytest
 
 from src.issuer_pcf.uni import UniPcfAdapter
@@ -16,31 +16,32 @@ _LIST_HTML = """
 """
 
 
-def _build_asset_xlsx(date_label="115/08/14", stock_rows=(("2330", "台積電", "12,134,000", "9.30%"),)):
-    """模擬統一官網匯出檔的版面：同一張表混了基金概況/期貨/股票好幾個區塊，用來驗證解析邏輯
-    真的有挑對「股票」那一段，不是隨便抓第一張表就結束。
+def _build_info_html(
+    tran_date="2026-08-14T00:00:00",
+    stock_rows=(
+        {"DetailCode": "2330", "DetailName": "台積電", "Share": 12134000.0},
+    ),
+    include_stock_group=True,
+):
+    """模擬統一官網基金明細頁：資產組合以 JSON 形式內嵌在 id="DataAsset" 的
+    data-content 屬性裡，依 AssetCode 分成好幾類，用來驗證解析邏輯真的有挑對
+    AssetCode == "ST" 那一組，不是隨便抓第一組就結束。
     """
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.append([f"資料日期：{date_label}"])
-    ws.append([])
-    ws.append(["基金資產"])
-    ws.append(["淨資產", "NTD 1"])
-    ws.append([])
-    ws.append(["項目", "金額", "權重"])
-    ws.append(["期貨(名目本金)", "NTD 1", "1%"])
-    ws.append([])
-    ws.append(["期貨(名目本金)"])
-    ws.append(["期貨代號", "期貨名稱", "持股權重", "口數", "契約年月"])
-    ws.append(["TX", "台指期貨", "1%", "1", "2026/08"])
-    ws.append([])
-    ws.append(["股票"])
-    ws.append(["股票代號", "股票名稱", "股數", "持股權重"])
-    for row in stock_rows:
-        ws.append(list(row))
-    buf = io.BytesIO()
-    wb.save(buf)
-    return buf.getvalue()
+    asset_groups = [
+        {"AssetCode": "NAV", "AssetName": "淨資產", "Details": None},
+        {"AssetCode": "CASH", "AssetName": "現金", "Details": None},
+    ]
+    if include_stock_group:
+        asset_groups.append({
+            "AssetCode": "ST",
+            "AssetName": "股票",
+            "Details": [
+                {**row, "TranDate": tran_date, "FundCode": "49YTW"}
+                for row in stock_rows
+            ],
+        })
+    data_content = html.escape(json.dumps(asset_groups, ensure_ascii=False), quote=True)
+    return f'<html><body><div id="DataAsset" data-content="{data_content}"></div></body></html>'
 
 
 def _fake_text_response(text: str):
@@ -50,15 +51,8 @@ def _fake_text_response(text: str):
     return resp
 
 
-def _fake_binary_response(content: bytes):
-    resp = MagicMock()
-    resp.raise_for_status.return_value = None
-    resp.content = content
-    return resp
-
-
-def _fake_session(list_html=_LIST_HTML, asset_xlsx=None):
-    asset_xlsx = asset_xlsx if asset_xlsx is not None else _build_asset_xlsx()
+def _fake_session(list_html=_LIST_HTML, info_html=None):
+    info_html = info_html if info_html is not None else _build_info_html()
     session = MagicMock()
 
     def get_side_effect(url, **kwargs):
@@ -66,15 +60,15 @@ def _fake_session(list_html=_LIST_HTML, asset_xlsx=None):
             return _fake_text_response("")
         if url == "https://www.ezmoney.com.tw/ETF/Fund/Index":
             return _fake_text_response(list_html)
-        if url == "https://www.ezmoney.com.tw/ETF/Fund/AssetExcelNPOI":
-            return _fake_binary_response(asset_xlsx)
+        if url == "https://www.ezmoney.com.tw/ETF/Fund/Info":
+            return _fake_text_response(info_html)
         raise AssertionError(f"未預期的請求網址：{url}")
 
     session.get.side_effect = get_side_effect
     return session
 
 
-def test_fetch_holdings_resolves_fund_code_then_maps_stock_section():
+def test_fetch_holdings_resolves_fund_code_then_maps_stock_group():
     adapter = UniPcfAdapter()
     with patch("src.issuer_pcf.uni.requests.Session", return_value=_fake_session()):
         records = adapter.fetch_holdings("00981A", "2026-08-14")
@@ -82,14 +76,14 @@ def test_fetch_holdings_resolves_fund_code_then_maps_stock_section():
     assert records == [{"component_stock_id": "2330", "component_name": "台積電", "holding_shares": 12134000}]
 
 
-def test_fetch_holdings_ignores_futures_and_fund_asset_sections():
-    """基金資產/期貨區塊不能被誤認成股票清單，只有「股票」標題後面那段才算數。"""
-    xlsx = _build_asset_xlsx(stock_rows=(
-        ("2330", "台積電", "12,134,000", "9.30%"),
-        ("2454", "聯發科", "5,448,000", "7.34%"),
+def test_fetch_holdings_ignores_non_stock_asset_groups():
+    """NAV/現金等其他 AssetCode 群組不能被誤認成股票清單，只有 AssetCode == "ST" 那組才算數。"""
+    html_page = _build_info_html(stock_rows=(
+        {"DetailCode": "2330", "DetailName": "台積電", "Share": 12134000.0},
+        {"DetailCode": "2454", "DetailName": "聯發科", "Share": 5448000.0},
     ))
     adapter = UniPcfAdapter()
-    with patch("src.issuer_pcf.uni.requests.Session", return_value=_fake_session(asset_xlsx=xlsx)):
+    with patch("src.issuer_pcf.uni.requests.Session", return_value=_fake_session(info_html=html_page)):
         records = adapter.fetch_holdings("00981A", "2026-08-14")
 
     assert records == [
@@ -98,25 +92,36 @@ def test_fetch_holdings_ignores_futures_and_fund_asset_sections():
     ]
 
 
-def test_fetch_holdings_returns_empty_when_roc_date_mismatches_snapshot_date():
-    """Excel 資料日期是民國年格式，換算成西元年後要跟查詢日期比對，對不上視為當日尚未更新。"""
-    xlsx = _build_asset_xlsx(date_label="115/08/13")
+def test_fetch_holdings_returns_empty_when_tran_date_mismatches_snapshot_date():
+    html_page = _build_info_html(tran_date="2026-08-13T00:00:00")
     adapter = UniPcfAdapter()
-    with patch("src.issuer_pcf.uni.requests.Session", return_value=_fake_session(asset_xlsx=xlsx)):
+    with patch("src.issuer_pcf.uni.requests.Session", return_value=_fake_session(info_html=html_page)):
         records = adapter.fetch_holdings("00981A", "2026-08-14")
 
     assert records == []
 
 
-def test_fetch_holdings_passes_resolved_fund_code_to_asset_endpoint():
+def test_fetch_holdings_returns_empty_when_stock_group_missing():
+    """跟「股票」表格本身缺失（結構異常，直接報錯）不同：這裡是資產組合本身結構正常，
+    只是剛好沒有 ST 這個群組（例如當天尚未結算），視為當日尚未更新，不採用、不報錯。
+    """
+    html_page = _build_info_html(include_stock_group=False)
+    adapter = UniPcfAdapter()
+    with patch("src.issuer_pcf.uni.requests.Session", return_value=_fake_session(info_html=html_page)):
+        records = adapter.fetch_holdings("00981A", "2026-08-14")
+
+    assert records == []
+
+
+def test_fetch_holdings_passes_resolved_fund_code_to_info_endpoint():
     adapter = UniPcfAdapter()
     session = _fake_session()
     with patch("src.issuer_pcf.uni.requests.Session", return_value=session):
         adapter.fetch_holdings("00981A", "2026-08-14")
 
-    asset_call = session.get.call_args_list[-1]
-    assert asset_call.args[0] == "https://www.ezmoney.com.tw/ETF/Fund/AssetExcelNPOI"
-    assert asset_call.kwargs["params"] == {"fundCode": "49YTW"}
+    info_call = session.get.call_args_list[-1]
+    assert info_call.args[0] == "https://www.ezmoney.com.tw/ETF/Fund/Info"
+    assert info_call.kwargs["params"] == {"fundCode": "49YTW"}
 
 
 def test_fetch_holdings_raises_when_ticker_not_found_in_list():
@@ -126,17 +131,16 @@ def test_fetch_holdings_raises_when_ticker_not_found_in_list():
             adapter.fetch_holdings("99999", "2026-08-14")
 
 
-def test_fetch_holdings_raises_when_stock_section_missing():
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.append(["資料日期：115/08/14"])
-    ws.append(["期貨(名目本金)"])
-    ws.append(["期貨代號", "期貨名稱"])
-    ws.append(["TX", "台指期貨"])
-    buf = io.BytesIO()
-    wb.save(buf)
-
+def test_fetch_holdings_raises_when_data_asset_container_missing():
     adapter = UniPcfAdapter()
-    with patch("src.issuer_pcf.uni.requests.Session", return_value=_fake_session(asset_xlsx=buf.getvalue())):
+    with patch("src.issuer_pcf.uni.requests.Session", return_value=_fake_session(info_html="<html><body></body></html>")):
+        with pytest.raises(RuntimeError, match="FETCH_ISSUER_PCF_PARSE_ERROR"):
+            adapter.fetch_holdings("00981A", "2026-08-14")
+
+
+def test_fetch_holdings_raises_when_data_content_is_not_valid_json():
+    broken_html = '<html><body><div id="DataAsset" data-content="not json"></div></body></html>'
+    adapter = UniPcfAdapter()
+    with patch("src.issuer_pcf.uni.requests.Session", return_value=_fake_session(info_html=broken_html)):
         with pytest.raises(RuntimeError, match="FETCH_ISSUER_PCF_PARSE_ERROR"):
             adapter.fetch_holdings("00981A", "2026-08-14")

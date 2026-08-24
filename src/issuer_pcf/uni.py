@@ -1,16 +1,20 @@
-"""統一投信 PCF 資料來源：跟其他投信不同，這裡拿到的不是 JSON，而是一份真的 Excel 匯出檔，
-同一張工作表混了基金概況、期貨、現金、股票好幾個區塊，要挑出「股票」那一段才是成分股清單。
-先造訪一次首頁是為了拿到官網要求的工作階段 Cookie，之後才能正常打 Excel 匯出端點；資料日期
-欄位是民國年格式（例：115/08/14），也要自己換算成西元年才能跟查詢日期比對。
+"""統一投信 PCF 資料來源：基金明細頁是 Vue.js 前端框架搭配伺服器端渲染，完整的資產組合
+資料其實已經以 JSON 形式內嵌在頁面裡（藏在 `id="DataAsset"` 的 `<div>` `data-content`
+屬性，HTML 實體編碼過，BeautifulSoup 解析屬性值時會自動還原），不需要像原本那樣另外呼叫
+Excel 匯出端點、也不用處理 openpyxl／NPOI 相容性警告。資產組合依 `AssetCode` 分成好幾類
+（淨資產／現金／股票...），成分股在 `AssetCode == "ST"` 那一組，每筆明細帶 `TranDate`
+（交易日期）可驗證新鮮度，還附一個 `EditTime` 實際更新時間戳記可供診斷用。
+
+頁面本身沒有查詢日期的參數（實測過 date/qDate/tranDate/ddate/assetDate 等常見命名皆無
+效果，一律回傳當下最新資料），跟原本 Excel 匯出端點的限制一樣，只是換了個更乾淨的資料
+來源，不影響「能不能查歷史日期」這件事。
 """
 from __future__ import annotations
 
-import io
+import json
 import logging
 import re
-import warnings
 
-import openpyxl
 import requests
 from bs4 import BeautifulSoup
 
@@ -22,26 +26,25 @@ _REQUEST_TIMEOUT_SECONDS = 30
 _USER_AGENT = "FinanceTracker-ChipMonitor/1.0"
 _HOME_URL = "https://www.ezmoney.com.tw/"
 _LIST_URL = "https://www.ezmoney.com.tw/ETF/Fund/Index"
-_ASSET_URL = "https://www.ezmoney.com.tw/ETF/Fund/AssetExcelNPOI"
-_STOCK_SECTION_TITLE = "股票"
+_INFO_URL = "https://www.ezmoney.com.tw/ETF/Fund/Info"
 _FUND_CODE_PATTERN = re.compile(r"fundCode=([A-Za-z0-9]+)")
-_ROC_DATE_PATTERN = re.compile(r"(\d+)/(\d{2})/(\d{2})")
+_STOCK_ASSET_CODE = "ST"
 
 
 class UniPcfAdapter(IssuerPcfProvider):
     def fetch_holdings(self, etf_id: str, snapshot_date: str) -> list[dict]:
         session = self._new_session()
         fund_code = self._resolve_fund_code(session, etf_id)
-        rows, sheet_date = self._fetch_asset_sheet(session, fund_code)
+        details, tran_date = self._fetch_stock_details(session, fund_code)
 
-        if sheet_date != snapshot_date:
+        if tran_date != snapshot_date:
             logger.warning(
-                "統一投信 Excel 資料日期（%s）與查詢日期（%s）不符，視為當日尚未更新",
-                sheet_date, snapshot_date,
+                "統一投信資產組合日期（%s）與查詢日期（%s）不符，視為當日尚未更新",
+                tran_date, snapshot_date,
             )
             return []
 
-        return [self._to_holding(row) for row in self._extract_stock_rows(rows)]
+        return [self._to_holding(row) for row in details]
 
     def _new_session(self) -> requests.Session:
         session = requests.Session()
@@ -64,64 +67,37 @@ class UniPcfAdapter(IssuerPcfProvider):
             "請確認代碼是否確實為統一投信旗下 ETF"
         )
 
-    def _fetch_asset_sheet(self, session: requests.Session, fund_code: str) -> tuple[list[tuple], str]:
-        resp = session.get(_ASSET_URL, params={"fundCode": fund_code}, timeout=_REQUEST_TIMEOUT_SECONDS)
+    def _fetch_stock_details(self, session: requests.Session, fund_code: str) -> tuple[list[dict], str | None]:
+        resp = session.get(_INFO_URL, params={"fundCode": fund_code}, timeout=_REQUEST_TIMEOUT_SECONDS)
         resp.raise_for_status()
-        with warnings.catch_warnings():
-            # 這份檔案是站方用 NPOI（非真正的 Excel）產生的，沒有內建預設樣式；
-            # openpyxl 讀取時只是自動套用它自己的預設值頂著，資料本身讀取不受影響，
-            # 純粹是提示性警告，不消掉的話每次抓資料都會洗版排程 log。
-            warnings.filterwarnings(
-                "ignore",
-                message="Workbook contains no default style, apply openpyxl's default",
-                category=UserWarning,
-            )
-            workbook = openpyxl.load_workbook(io.BytesIO(resp.content), data_only=True)
-        rows = list(workbook.worksheets[0].iter_rows(values_only=True))
-        return rows, self._parse_roc_date(rows)
+        soup = BeautifulSoup(resp.text, "html.parser")
 
-    @staticmethod
-    def _parse_roc_date(rows: list[tuple]) -> str:
-        header = str(rows[0][0]) if rows and rows[0] else ""
-        match = _ROC_DATE_PATTERN.search(header)
-        if not match:
+        container = soup.find("div", id="DataAsset")
+        if container is None:
             raise RuntimeError(
-                "統一投信 Excel 找不到資料日期欄位（FETCH_ISSUER_PCF_PARSE_ERROR），格式可能已改版"
+                "統一投信基金明細頁找不到資產組合資料區塊（FETCH_ISSUER_PCF_PARSE_ERROR），"
+                "網站可能已改版"
             )
-        roc_year, month, day = match.groups()
-        return f"{int(roc_year) + 1911:04d}-{month}-{day}"
-
-    @staticmethod
-    def _extract_stock_rows(rows: list[tuple]) -> list[tuple]:
-        records = []
-        in_section = False
-        skip_header = False
-        for row in rows:
-            first = row[0] if row else None
-            if first == _STOCK_SECTION_TITLE and not any(row[1:]):
-                in_section = True
-                skip_header = True
-                continue
-            if not in_section:
-                continue
-            if skip_header:
-                skip_header = False  # 這一列是欄位標題（股票代號/股票名稱/股數/持股權重），跳過
-                continue
-            if first is None:
-                break  # 空白列代表「股票」區塊結束
-            records.append(row)
-
-        if not records:
+        try:
+            asset_groups = json.loads(container.get("data-content") or "")
+        except (json.JSONDecodeError, TypeError) as exc:
             raise RuntimeError(
-                "統一投信 Excel 找不到「股票」區塊（FETCH_ISSUER_PCF_PARSE_ERROR），網站可能已改版"
-            )
-        return records
+                "統一投信資產組合資料解析失敗（FETCH_ISSUER_PCF_PARSE_ERROR），格式可能已改版"
+            ) from exc
+
+        stock_group = next((g for g in asset_groups if g.get("AssetCode") == _STOCK_ASSET_CODE), None)
+        details = (stock_group or {}).get("Details") or []
+        if not details:
+            return [], None
+
+        # TranDate 格式為 "YYYY-MM-DDTHH:MM:SS"，只取日期部分跟查詢日期比對。
+        tran_date = str(details[0].get("TranDate", ""))[:10]
+        return details, tran_date
 
     @staticmethod
-    def _to_holding(row: tuple) -> dict:
-        stock_id, stock_name, shares = row[0], row[1], row[2]
+    def _to_holding(row: dict) -> dict:
         return {
-            "component_stock_id": str(stock_id),
-            "component_name": stock_name,
-            "holding_shares": int(str(shares).replace(",", "")),
+            "component_stock_id": str(row["DetailCode"]),
+            "component_name": row["DetailName"],
+            "holding_shares": int(row["Share"]),
         }
