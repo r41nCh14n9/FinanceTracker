@@ -40,6 +40,19 @@ def test_fetch_holdings_resolves_fund_id_and_decodes_entities():
     assert requested_url == "https://www.kgifund.com.tw/Fund/Detail?fundID=J023"
 
 
+def test_fetch_holdings_resolves_second_registered_ticker_to_its_own_fund_id():
+    # 復用同一份 fixture：解析邏輯跟股票代碼無關，這裡只驗證第二檔（00407A）能查到
+    # 正確的內部代碼 J024，不會誤用 009816 的 J023
+    html = _FIXTURE_PATH.read_text(encoding="utf-8")
+    adapter = KgiPcfAdapter()
+
+    with patch("src.issuer_pcf.kgi.requests.get", return_value=_fake_response(html)) as mock_get:
+        adapter.fetch_holdings("00407A", "2026-08-24")
+
+    requested_url = mock_get.call_args.args[0]
+    assert requested_url == "https://www.kgifund.com.tw/Fund/Detail?fundID=J024"
+
+
 def test_fetch_holdings_raises_when_ticker_not_in_internal_code_table():
     adapter = KgiPcfAdapter()
 

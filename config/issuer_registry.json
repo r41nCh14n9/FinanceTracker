@@ -61,7 +61,7 @@
       "isEnabled": true,
       "adapter": "KgiPcfAdapter",
       "pcf_url_template": "https://www.kgifund.com.tw/Fund/Detail?fundID={etf_id}",
-      "etfs": ["009816"]
+      "etfs": ["009816", "00407A"]
     }
   }
 }
