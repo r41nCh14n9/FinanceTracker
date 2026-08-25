@@ -1,0 +1,10 @@
+[
+  {
+    "scope": "MARKET",
+    "trigger_type": "MARKET_TRUST",
+    "stock_id": null,
+    "estimated_amount": -3983977063,
+    "market_cap_tier": null,
+    "volume_ratio_pct": null
+  }
+]
