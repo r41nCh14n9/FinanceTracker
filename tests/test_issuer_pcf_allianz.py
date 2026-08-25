@@ -92,9 +92,12 @@ def _fake_session(token_payload=None, overview_payload=None, assets_payload=None
 
 
 def test_fetch_holdings_maps_fields_and_skips_non_stock_tables():
+    """fixture 的 NavDate 是 2026/08/21、PCFDate 是 2026/08/24——查詢日期要對上 NavDate
+    （實際持股日）才拿得到資料，這也同時驗證了 PCFDate 不能拿來當比對依據。
+    """
     adapter = AllianzPcfAdapter()
     with patch("src.issuer_pcf.allianz.requests.Session", return_value=_fake_session()):
-        records = adapter.fetch_holdings("00984A", "2026-08-24")
+        records = adapter.fetch_holdings("00984A", "2026-08-21")
 
     assert records == [
         {"component_stock_id": "2059", "component_name": "川湖", "holding_shares": 41000},
@@ -106,7 +109,7 @@ def test_fetch_holdings_sends_xsrf_token_header_and_resolved_fund_id():
     adapter = AllianzPcfAdapter()
     session = _fake_session()
     with patch("src.issuer_pcf.allianz.requests.Session", return_value=session):
-        adapter.fetch_holdings("00984A", "2026-08-24")
+        adapter.fetch_holdings("00984A", "2026-08-21")
 
     assert session.headers["x-xsrf-token"] == "fake-xsrf-token"
     assets_call = session.post.call_args_list[-1]
@@ -114,10 +117,21 @@ def test_fetch_holdings_sends_xsrf_token_header_and_resolved_fund_id():
     assert assets_call.kwargs["json"] == {"FundID": "E0001"}
 
 
-def test_fetch_holdings_returns_empty_when_pcf_date_mismatches_snapshot_date():
+def test_fetch_holdings_returns_empty_when_nav_date_mismatches_snapshot_date():
     adapter = AllianzPcfAdapter()
     with patch("src.issuer_pcf.allianz.requests.Session", return_value=_fake_session()):
         records = adapter.fetch_holdings("00984A", "2026-08-23")
+
+    assert records == []
+
+
+def test_fetch_holdings_returns_empty_when_snapshot_date_matches_pcf_date_not_nav_date():
+    """2026-08-24 是 fixture 裡的 PCFDate（公告日，恆比實際持股日晚一天），不是 NavDate；
+    誤用 PCFDate 驗證是本次修正前的真實 bug，這裡明確鎖住不能再退回去。
+    """
+    adapter = AllianzPcfAdapter()
+    with patch("src.issuer_pcf.allianz.requests.Session", return_value=_fake_session()):
+        records = adapter.fetch_holdings("00984A", "2026-08-24")
 
     assert records == []
 
@@ -126,7 +140,7 @@ def test_fetch_holdings_raises_when_ticker_not_found_in_overview():
     adapter = AllianzPcfAdapter()
     with patch("src.issuer_pcf.allianz.requests.Session", return_value=_fake_session()):
         with pytest.raises(RuntimeError, match="FETCH_ISSUER_PCF_PARSE_ERROR"):
-            adapter.fetch_holdings("99999", "2026-08-24")
+            adapter.fetch_holdings("99999", "2026-08-21")
 
 
 def test_fetch_holdings_raises_when_stock_table_missing():
@@ -134,7 +148,7 @@ def test_fetch_holdings_raises_when_stock_table_missing():
         "Entries": {
             "FundID": "E0001",
             "Data": {
-                "FundAsset": {"PCFDate": "2026/08/24"},
+                "FundAsset": {"NavDate": "2026/08/24", "PCFDate": "2026/08/25"},
                 "Table": [{"TableTitle": "期貨", "Columns": [], "Rows": []}],
             },
         }
@@ -151,7 +165,7 @@ def test_fetch_holdings_raises_when_stock_table_columns_unexpected():
         "Entries": {
             "FundID": "E0001",
             "Data": {
-                "FundAsset": {"PCFDate": "2026/08/24"},
+                "FundAsset": {"NavDate": "2026/08/24", "PCFDate": "2026/08/25"},
                 "Table": [
                     {
                         "TableTitle": "股票 (95.49%)",
@@ -173,18 +187,20 @@ def test_fetch_holdings_raises_when_fund_data_missing():
     adapter = AllianzPcfAdapter()
     with patch("src.issuer_pcf.allianz.requests.Session", return_value=_fake_session(assets_payload=payload)):
         with pytest.raises(RuntimeError, match="FETCH_ISSUER_PCF_PARSE_ERROR"):
-            adapter.fetch_holdings("00984A", "2026-08-24")
+            adapter.fetch_holdings("00984A", "2026-08-21")
 
 
 def test_fetch_holdings_parses_real_captured_response_fixtures():
-    """用實際查證時擷取（並裁減筆數）的真實回應驗證解析邏輯，不是憑空捏造的資料形狀。"""
+    """用實際查證時擷取（並裁減筆數）的真實回應驗證解析邏輯，不是憑空捏造的資料形狀；
+    fixture 的 NavDate 是 2026/08/21、PCFDate 是 2026/08/24，查詢日期要對上 NavDate。
+    """
     overview_payload = json.loads(_OVERVIEW_FIXTURE_PATH.read_text(encoding="utf-8"))
     assets_payload = json.loads(_ASSETS_FIXTURE_PATH.read_text(encoding="utf-8"))
 
     adapter = AllianzPcfAdapter()
     session = _fake_session(overview_payload=overview_payload, assets_payload=assets_payload)
     with patch("src.issuer_pcf.allianz.requests.Session", return_value=session):
-        records = adapter.fetch_holdings("00984A", "2026-08-24")
+        records = adapter.fetch_holdings("00984A", "2026-08-21")
 
     assert records == [
         {"component_stock_id": "2059", "component_name": "川湖", "holding_shares": 41000},

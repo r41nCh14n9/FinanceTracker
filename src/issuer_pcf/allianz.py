@@ -7,6 +7,11 @@ CFundNo 一樣不用自己維護對照表，用清單 API 查一次就能動態�
 總市值總覽（列資料裡本身就有一格字面上寫「股票」，容易誤認），真正的成分股清單要挑
 TableTitle 開頭是「股票」的那一張；欄位用 Columns 定義順序、Rows 依序對應的位置陣列格式，
 不是具名鍵值物件，所以要照 Columns 的 Name 動態找出每一欄的位置再取值。
+
+回應裡的 FundAsset 同時有 NavDate 跟 PCFDate 兩個日期欄位，容易搞混：PCFDate 是「這份
+PCF 公告要給哪一天使用」，語意上恆比實際持股日晚一天；NavDate 才是實際持股／淨值對應
+的日期，要驗證新鮮度得比對 NavDate，不能誤用 PCFDate（曾經誤用過一次，2026-08-24 用
+NavDate=2026/08/24、PCFDate=2026/08/25 的真實回應交叉驗證後改正）。
 """
 from __future__ import annotations
 
@@ -36,12 +41,15 @@ class AllianzPcfAdapter(IssuerPcfProvider):
         data = self._fetch_assets_data(session, fund_id)
 
         # 沒看到可以帶查詢日期的參數，這支 API 似乎永遠只回最新一期，跟富邦一樣用回應
-        # 帶的日期欄位跟查詢日期比對，不符就當作當天還沒更新。
-        pcf_date = (data.get("FundAsset") or {}).get("PCFDate", "").replace("/", "-")
-        if pcf_date != snapshot_date:
+        # 帶的日期欄位跟查詢日期比對，不符就當作當天還沒更新。這裡要用 NavDate，不能用
+        # PCFDate——PCFDate 其實是「這份 PCF 給哪一天用」的公告日，恆比實際持股日晚一天
+        # （跟元大 trandate/anndate 是同一種產業慣例），拿它去比對查詢日期永遠對不上。
+        fund_asset = data.get("FundAsset") or {}
+        nav_date = fund_asset.get("NavDate", "").replace("/", "-")
+        if nav_date != snapshot_date:
             logger.warning(
                 "安聯 PCF 資料日期（%s）與查詢日期（%s）不符，視為當日尚未更新",
-                pcf_date, snapshot_date,
+                nav_date, snapshot_date,
             )
             return []
 
