@@ -53,10 +53,10 @@ def test_message_formatter_includes_market_stock_and_etf_sections():
     combined = "\n".join(messages)
 
     assert "外資賣超250.0億" in combined
-    assert "2330 台積電 [大型, 大額]:賣超 8.0 億元" in combined
-    assert "新建倉：3231 緯創" in combined
-    assert "完全清倉：2408 南亞科" in combined
-    assert "調倉加碼：2317 鴻海" in combined
+    assert "2330 台積電 [大型]:賣超 8.0 億元 (大額，外 -5,000 張 / 投 +1,000 張 / 自 +0 張)" in combined
+    assert "3231 緯創 (新建倉 +520 股)" in combined
+    assert "2408 南亞科 (完全清倉)" in combined
+    assert "2317 鴻海 (調倉加碼 +150 股，+15.0%)" in combined
 
 
 def test_message_formatter_groups_multiple_etfs_under_one_shared_heading():
@@ -75,8 +75,8 @@ def test_message_formatter_groups_multiple_etfs_under_one_shared_heading():
     assert combined.count("◆ ETF 換倉動態") == 1
     assert "- 00981A:" in combined
     assert "- 0050:" in combined
-    assert "調倉減碼：2360 致茂" in combined
-    assert "新建倉：3231 緯創" in combined
+    assert "2360 致茂 (調倉減碼 -900 股，-90.0%)" in combined
+    assert "3231 緯創 (新建倉 +520 股)" in combined
 
 
 def test_message_formatter_combines_institutional_and_etf_into_one_message_when_short():
@@ -91,7 +91,7 @@ def test_message_formatter_combines_institutional_and_etf_into_one_message_when_
     assert "◆ 大盤三大法人動態" in messages[0]
     assert "◆ ETF 換倉動態" in messages[0]
     assert "- 0050:" in messages[0]
-    assert "新建倉：3231 緯創" in messages[0]
+    assert "3231 緯創 (新建倉 +520 股)" in messages[0]
 
 
 def test_message_formatter_paginates_when_combined_content_too_long():
@@ -132,7 +132,64 @@ def test_message_formatter_labels_volume_and_amount_trigger_together():
         )
     ]
     messages = formatter.format("2026-08-05", [], stock_alerts, [_institutional_trade()], [])
-    assert "[大型, 量能, 大額]" in "\n".join(messages)
+    combined = "\n".join(messages)
+    assert "[大型]" in combined
+    assert "(量能, 大額，外" in combined
+
+
+def test_message_formatter_appends_industry_and_concept_tags_to_stock_alert():
+    formatter = MessageFormatter()
+    stock_alerts = [
+        InstitutionalAlert(
+            scope=AlertScope.STOCK,
+            trigger_type=AlertTriggerType.TIERED_AMOUNT,
+            stock_id="2330",
+            estimated_amount=-800_000_000,
+            market_cap_tier=MarketCapTier.LARGE,
+        )
+    ]
+    industry_map = {"2330": "半導體業"}
+    concept_map = {"2330": ["IC 製造", "先進封裝"]}
+
+    messages = formatter.format(
+        "2026-08-05", [], stock_alerts, [_institutional_trade()], [], industry_map, concept_map
+    )
+
+    assert "[大型, 半導體, IC 製造, 先進封裝]" in "\n".join(messages)
+
+
+def test_message_formatter_omits_brackets_when_no_classification_available():
+    """市值分級、產業別、概念標籤三者都沒有時，[] 整段不顯示，不留下空括號。"""
+    formatter = MessageFormatter()
+    events = [RebalanceEvent("2026-08-05", "0050", "9999", "無分類個股", RebalanceEventType.DELETION, 800, 0, None)]
+
+    messages = formatter.format("2026-08-05", [], [], [], events)
+
+    assert "9999 無分類個股 (完全清倉)" in "\n".join(messages)
+    assert "9999 無分類個股 []" not in "\n".join(messages)
+
+
+def test_message_formatter_groups_etf_rebalance_lines_by_first_seen_industry_order():
+    """同一 ETF 底下的換倉項目要依產業別分組相鄰顯示，組間順序＝清單中各產業第一次
+    出現的順序；查無產業別的股票統一排到最後。
+    """
+    formatter = MessageFormatter()
+    events = [
+        RebalanceEvent("2026-08-05", "00985A", "3661", "世芯-KY", RebalanceEventType.ADDITION, 0, 40000, None),
+        RebalanceEvent("2026-08-05", "00985A", "2603", "長榮", RebalanceEventType.REBALANCE, 1_738_000, 727_000, -58.2),
+        RebalanceEvent("2026-08-05", "00985A", "3529", "力旺", RebalanceEventType.DELETION, 500, 0, None),
+        RebalanceEvent("2026-08-05", "00985A", "9999", "無分類個股", RebalanceEventType.ADDITION, 0, 100, None),
+    ]
+    industry_map = {"3661": "半導體業", "2603": "航運業", "3529": "半導體業"}
+
+    messages = formatter.format("2026-08-05", [], [], [], events, industry_map, {})
+    combined = "\n".join(messages)
+
+    # 半導體業（世芯、力旺）相鄰在前，航運業（長榮）在其後，無產業別的排最後
+    semiconductor_block = "3661 世芯-KY [半導體] (新建倉 +40,000 股)\n  3529 力旺 [半導體] (完全清倉)"
+    assert semiconductor_block in combined
+    assert combined.index("長榮") > combined.index("力旺")
+    assert combined.index("無分類個股") > combined.index("長榮")
 
 
 class _FakeConfig:

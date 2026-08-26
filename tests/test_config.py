@@ -220,6 +220,31 @@ def test_get_available_etfs_by_issuer(tmp_path):
     assert config.get_available_etfs_by_issuer("does-not-exist") == []
 
 
+def test_get_concept_tags_returns_empty_dict_when_file_missing(tmp_path):
+    """concept_tags.json 是選填檔案，不存在時不該讓 ConfigLoader 初始化失敗。"""
+    config_dir = _make_valid_config_dir(tmp_path)
+    config = ConfigLoader(config_dir=config_dir)
+
+    assert config.get_concept_tags() == {}
+
+
+def test_get_concept_tags_loads_existing_file(tmp_path):
+    config_dir = _make_valid_config_dir(tmp_path)
+    _write(config_dir / "concept_tags.json", {"IC 設計": {"members": [{"stock_id": "3529", "stock_name": "力旺"}]}})
+    config = ConfigLoader(config_dir=config_dir)
+
+    assert config.get_concept_tags() == {"IC 設計": {"members": [{"stock_id": "3529", "stock_name": "力旺"}]}}
+
+
+def test_get_concept_tags_returns_empty_dict_when_file_malformed(tmp_path):
+    """格式錯誤是選填裝飾功能的問題，不該讓整個設定檔載入（進而整個排程）失敗。"""
+    config_dir = _make_valid_config_dir(tmp_path)
+    (config_dir / "concept_tags.json").write_text("{not valid json", encoding="utf-8")
+    config = ConfigLoader(config_dir=config_dir)
+
+    assert config.get_concept_tags() == {}
+
+
 def test_get_env_required_missing_raises(monkeypatch):
     monkeypatch.delenv("SOME_TEST_ENV", raising=False)
     with pytest.raises(ConfigError):

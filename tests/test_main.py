@@ -2,17 +2,27 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from main import _classify_rebalance_events, _parse_target_date, main, run, run_purge
+from main import _classify_rebalance_events, _parse_target_date, _resolve_classification_tags, main, run, run_purge
 from src.fetcher import Fetcher, FinMindClient
 from src.issuer_pcf.base import IssuerPcfProvider
-from src.models import DailySnapshotMeta, EtfHoldingRecord, PurgeResult
+from src.models import (
+    AlertScope,
+    AlertTriggerType,
+    DailySnapshotMeta,
+    EtfHoldingRecord,
+    InstitutionalAlert,
+    PurgeResult,
+    RebalanceEvent,
+    RebalanceEventType,
+)
 from src.storage import SnapshotRepository
 
 
 class _FakeConfig:
-    def __init__(self, etfs=("0050",), stocks=("2330",)):
+    def __init__(self, etfs=("0050",), stocks=("2330",), concept_tags=None):
         self._etfs = etfs
         self._stocks = stocks
+        self._concept_tags = concept_tags or {}
 
     def get_watchlist_etfs(self):
         return list(self._etfs)
@@ -31,6 +41,13 @@ class _FakeConfig:
     @staticmethod
     def get_issuer_name(etf_id):
         return f"測試投信（{etf_id}）"
+
+    @staticmethod
+    def get_env(key, required=True):
+        return "dummy-token"
+
+    def get_concept_tags(self):
+        return self._concept_tags
 
 
 def _make_repo(tmp_path):
@@ -150,6 +167,28 @@ def test_classify_rebalance_events_skips_when_adapter_does_not_support_backfill(
     provider.fetch_holdings.assert_not_called()
 
 
+def test_resolve_classification_tags_covers_stock_alerts_and_rebalance_events(tmp_path):
+    """需要補分類的股票代碼＝達門檻個股 + ETF 換倉成分股的聯集，重複的不會查兩次。"""
+    storage = _make_repo(tmp_path)
+    storage.write_industry_tags({"半導體業": {"members": [{"stock_id": "2330", "stock_name": "台積電"}]}})
+    finmind = MagicMock(spec=FinMindClient)
+    finmind.fetch_stock_industry.return_value = {
+        "stock_id": "2603", "stock_name": "長榮", "industry_category": "航運業",
+    }
+    stock_alerts = [InstitutionalAlert(scope=AlertScope.STOCK, trigger_type=AlertTriggerType.VOLUME_RATIO, stock_id="2330")]
+    rebalance_events = [
+        RebalanceEvent("2026-08-24", "0050", "2603", "長榮", RebalanceEventType.ADDITION, 0, 1000, None)
+    ]
+    config = _FakeConfig(concept_tags={"IC 製造": {"members": [{"stock_id": "2330", "stock_name": "台積電"}]}})
+
+    with patch("main.FinMindClient", return_value=finmind):
+        industry_map, concept_map = _resolve_classification_tags(config, storage, stock_alerts, rebalance_events)
+
+    assert industry_map == {"2330": "半導體業", "2603": "航運業"}
+    assert concept_map == {"2330": ["IC 製造"]}
+    finmind.fetch_stock_industry.assert_called_once_with("2603")  # 2330 本地已有分類，不重打 API
+
+
 @pytest.mark.parametrize(
     "raw, expected",
     [
@@ -247,7 +286,15 @@ def test_run_skips_fetch_on_non_trading_day_even_in_dry_run_mode():
 def test_run_still_previews_normally_in_dry_run_mode_on_trading_day():
     """dry-run 的用途是「抓真資料但不推播」，交易日的預覽功能不受本次調整影響。"""
     patchers = _patch_run_dependencies()
-    with patchers[0], patchers[1], patchers[2] as mock_fetcher_cls, patchers[3], patchers[4]:
+    with (
+        patchers[0] as mock_config_cls,
+        patchers[1] as mock_storage_cls,
+        patchers[2] as mock_fetcher_cls,
+        patchers[3],
+        patchers[4],
+    ):
+        mock_config_cls.return_value.get_concept_tags.return_value = {}
+        mock_storage_cls.return_value.read_industry_tags.return_value = {}
         mock_fetcher = mock_fetcher_cls.return_value
         mock_fetcher.is_known_trading_day.return_value = True
         mock_fetcher.fetch_all.return_value = MagicMock(is_trading_day=True)

@@ -146,6 +146,20 @@ def test_capital_stock_cache_roundtrip_independent_of_date(tmp_path):
     assert repo.read_capital_stock_cache("2454") is None
 
 
+def test_industry_tags_roundtrip(tmp_path):
+    repo = _make_repo(tmp_path)
+    table = {"半導體業": {"members": [{"stock_id": "2330", "stock_name": "台積電"}], "updated_at": "2026-08-26T00:00:00+00:00"}}
+    repo.write_industry_tags(table)
+
+    loaded = repo.read_industry_tags()
+    assert loaded == table
+
+
+def test_read_industry_tags_returns_empty_dict_when_missing(tmp_path):
+    repo = _make_repo(tmp_path)
+    assert repo.read_industry_tags() == {}
+
+
 def test_market_institutional_roundtrip(tmp_path):
     repo = _make_repo(tmp_path)
     record = MarketInstitutionalRecord("2026-07-29", -25_000_000_000, 1_000_000_000, -6_000_000_000)

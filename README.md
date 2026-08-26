@@ -43,6 +43,7 @@ FinanceTracker/
 │  │  ├─ fubon.py               # FubonPcfAdapter：BeautifulSoup 解析靜態表格
 │  │  └─ registry.py            # ADAPTER_REGISTRY：adapter 鍵 → 類別對照
 │  ├─ analyzer.py               # BrokerFilter / RebalanceClassifier：門檻篩選與換倉分類
+│  ├─ classification.py         # ClassificationService：維護產業分類表，供通知附加分類標籤
 │  ├─ notifier.py               # MessageFormatter / LineClient / Notifier：簡報格式化與推播
 │  └─ storage.py                # SnapshotRepository：讀寫 data/ 下所有 JSON 檔案
 ├─ config/                      # 版控內設定檔，由維運人員以 commit/PR 維護
@@ -50,10 +51,13 @@ FinanceTracker/
 │  ├─ recipients.json           # LINE 收訊 User/Group 名單
 │  ├─ broker_branches.json      # 分點代碼 ↔ 中文名稱對照表
 │  ├─ watchlist.json            # 監控的股票代碼／分點名稱／ETF 代碼清單
-│  └─ issuer_registry.json      # 投信登記表：isEnabled 開關 + 各投信可監控 ETF 清單 + Adapter/URL（受支援 ETF 的唯一真實來源）
+│  ├─ issuer_registry.json      # 投信登記表：isEnabled 開關 + 各投信可監控 ETF 清單 + Adapter/URL（受支援 ETF 的唯一真實來源）
+│  └─ concept_tags.json         # （選填）人工維護的概念股標籤，結構同 data/reference/industry_tags.json（分類 → 成員清單）
 ├─ data/                        # 執行後自動產生，不需手動建立
 │  ├─ snapshots/{date}/         # 當日原始快照（_meta.json、broker_trades.json、etf_holdings/{etf_id}.json）
-│  └─ reports/{date}/           # 當日分析與推播結果（rebalance_events.json、notification_log.json）
+│  ├─ reports/{date}/           # 當日分析與推播結果（rebalance_events.json、notification_log.json）
+│  ├─ reference/capital_stock/{stock_id}.json  # 股本快取（既有，供市值分級門檻使用）
+│  └─ tags/industry_tags.json   # 產業別 → 成分股反查表，由 ClassificationService 逐股累積建立，不分日期
 ├─ tests/                       # pytest 單元測試
 └─ .github/workflows/
    └─ daily-chip-monitor.yml    # 排程與手動觸發 workflow

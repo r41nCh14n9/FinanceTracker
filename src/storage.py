@@ -63,6 +63,7 @@ class SnapshotRepository:
         self._snapshots_dir = self._data_dir / "snapshots"
         self._reports_dir = self._data_dir / "reports"
         self._reference_dir = self._data_dir / "reference"
+        self._tags_dir = self._data_dir / "tags"
 
     # --- 路徑 helpers ---
     def _snapshot_dir(self, snapshot_date: str) -> Path:
@@ -139,6 +140,15 @@ class SnapshotRepository:
 
     def write_capital_stock_cache(self, snapshot: StockCapitalSnapshot) -> None:
         self._write_json(self._capital_stock_cache_path(snapshot.stock_id), dataclasses.asdict(snapshot))
+
+    # --- INDUSTRY_TAG（產業→成員反查表，機器自動維護，整份檔案覆寫，不分日期）
+    # 獨立放在 data/tags/ 而非 data/reference/，跟股本快取等「單一數值快取」性質不同，
+    # 分類標籤未來可能會有更多種類，先給它自己的資料夾。
+    def read_industry_tags(self) -> dict:
+        return self._read_json(self._tags_dir / "industry_tags.json") or {}
+
+    def write_industry_tags(self, table: dict) -> None:
+        self._write_json(self._tags_dir / "industry_tags.json", table)
 
     # --- MARKET_INSTITUTIONAL_RECORD（大盤三大法人買賣金額，每天僅一筆） ---
     def write_market_institutional(self, snapshot_date: str, record: MarketInstitutionalRecord) -> None:
