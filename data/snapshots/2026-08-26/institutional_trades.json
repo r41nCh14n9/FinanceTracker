@@ -1,0 +1,28 @@
+[
+  {
+    "trade_date": "2026-08-26",
+    "stock_id": "2330",
+    "stock_name": "台積電",
+    "foreign_investor_buy": 14401413,
+    "foreign_investor_sell": 9197081,
+    "foreign_dealer_self_net": 0,
+    "investment_trust_buy": 195880,
+    "investment_trust_sell": 716589,
+    "dealer_self_net": 134070,
+    "dealer_hedging_net": 92428,
+    "total_net": 4910121
+  },
+  {
+    "trade_date": "2026-08-26",
+    "stock_id": "2454",
+    "stock_name": "聯發科",
+    "foreign_investor_buy": 4683598,
+    "foreign_investor_sell": 3451748,
+    "foreign_dealer_self_net": 0,
+    "investment_trust_buy": 312201,
+    "investment_trust_sell": 538965,
+    "dealer_self_net": 95282,
+    "dealer_hedging_net": 47194,
+    "total_net": 1147562
+  }
+]
