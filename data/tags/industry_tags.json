@@ -1,0 +1,97 @@
+{
+  "塑膠工業": {
+    "members": [
+      {
+        "stock_id": "1301",
+        "stock_name": "台塑"
+      },
+      {
+        "stock_id": "1303",
+        "stock_name": "南亞"
+      }
+    ],
+    "updated_at": "2026-08-26T05:22:20.275122+00:00"
+  },
+  "玻璃陶瓷": {
+    "members": [
+      {
+        "stock_id": "1802",
+        "stock_name": "台玻"
+      }
+    ],
+    "updated_at": "2026-08-26T05:22:20.973147+00:00"
+  },
+  "電子零組件業": {
+    "members": [
+      {
+        "stock_id": "2327",
+        "stock_name": "國巨*"
+      },
+      {
+        "stock_id": "2383",
+        "stock_name": "台光電"
+      },
+      {
+        "stock_id": "3533",
+        "stock_name": "嘉澤"
+      },
+      {
+        "stock_id": "6805",
+        "stock_name": "富世達"
+      }
+    ],
+    "updated_at": "2026-08-26T05:22:31.566081+00:00"
+  },
+  "航運業": {
+    "members": [
+      {
+        "stock_id": "2603",
+        "stock_name": "長榮"
+      }
+    ],
+    "updated_at": "2026-08-26T05:22:22.984787+00:00"
+  },
+  "電子工業": {
+    "members": [
+      {
+        "stock_id": "3008",
+        "stock_name": "大立光"
+      },
+      {
+        "stock_id": "3450",
+        "stock_name": "聯鈞"
+      },
+      {
+        "stock_id": "3661",
+        "stock_name": "世芯-KY"
+      }
+    ],
+    "updated_at": "2026-08-26T05:22:28.026608+00:00"
+  },
+  "半導體業": {
+    "members": [
+      {
+        "stock_id": "3529",
+        "stock_name": "力旺"
+      },
+      {
+        "stock_id": "4966",
+        "stock_name": "譜瑞-KY"
+      },
+      {
+        "stock_id": "6187",
+        "stock_name": "萬潤"
+      }
+    ],
+    "updated_at": "2026-08-26T05:22:30.164711+00:00"
+  },
+  "生技醫療業": {
+    "members": [
+      {
+        "stock_id": "6446",
+        "stock_name": "藥華藥"
+      }
+    ],
+    "updated_at": "2026-08-26T05:22:30.904656+00:00"
+  }
+}

@@ -61,6 +61,15 @@ _TIER_LABELS = {
 
 _REPORT_HEADER_PREFIX = "【籌碼監控日報】"
 
+_INDUSTRY_SUFFIX = "業"
+
+
+def _display_industry(industry: str) -> str:
+    """顯示層去掉官方產業別字尾的「業」字（如「半導體業」->「半導體」），純粹是
+    為了讓標籤短一點；落地儲存的原始值不受影響。
+    """
+    return industry[: -len(_INDUSTRY_SUFFIX)] if industry.endswith(_INDUSTRY_SUFFIX) else industry
+
 
 class MessageFormatter:
     def format(
@@ -70,16 +79,24 @@ class MessageFormatter:
         stock_alerts: list[InstitutionalAlert],
         institutional_trades: list[dict],
         rebalance_events: list[RebalanceEvent],
+        industry_map: dict[str, str] | None = None,
+        concept_map: dict[str, list[str]] | None = None,
     ) -> list[str]:
         """回傳這次要推播的訊息清單：大盤三大法人動態、個股買賣超、各檔 ETF 換倉動態
         全部合併進同一份簡報，盡量塞進同一則訊息裡；只有整份內容長度逼近 LINE 訊息上限
         時才會自動分頁成好幾則，不會因為主題不同就無條件拆成多則訊息（訊息則數會計入
         每日/每月推播配額，能合併就合併）。
+
+        industry_map／concept_map 是「股票代碼 -> 分類」的反查結果（呼叫端已先反查好），
+        用來在個股與 ETF 換倉明細後面附加分類標籤；查無分類的股票就是沒有這個標籤，
+        不影響原有內容照常顯示。
         """
+        industry_map = industry_map or {}
+        concept_map = concept_map or {}
         header_lines = [f"{_REPORT_HEADER_PREFIX}{report_date}"]
         body_blocks = self._build_market_section(market_alerts)
-        body_blocks += self._build_stock_section(stock_alerts, institutional_trades)
-        body_blocks += self._build_etf_rebalance_section(rebalance_events)
+        body_blocks += self._build_stock_section(stock_alerts, institutional_trades, industry_map, concept_map)
+        body_blocks += self._build_etf_rebalance_section(rebalance_events, industry_map, concept_map)
         return self._paginate(header_lines, body_blocks)
 
     def _build_market_section(self, market_alerts: list[InstitutionalAlert]) -> list[list[str]]:
@@ -87,19 +104,28 @@ class MessageFormatter:
         return [["", "◆ 大盤三大法人動態", *self._format_market_alerts(market_alerts)]]
 
     def _build_stock_section(
-        self, stock_alerts: list[InstitutionalAlert], institutional_trades: list[dict]
+        self,
+        stock_alerts: list[InstitutionalAlert],
+        institutional_trades: list[dict],
+        industry_map: dict[str, str],
+        concept_map: dict[str, list[str]],
     ) -> list[list[str]]:
         """區塊標題跟第一檔股票的內容黏在同一個 block，避免分頁時標題留在某一頁、
         內容卻全部擠到下一頁；其餘每一檔股票各自獨立成一個 block，真的很多檔觸發時
         才允許從股票與股票之間分頁。
         """
-        stock_blocks = self._format_stock_alert_blocks(stock_alerts, institutional_trades)
+        stock_blocks = self._format_stock_alert_blocks(stock_alerts, institutional_trades, industry_map, concept_map)
         if not stock_blocks:
             stock_blocks = [["  （無達門檻標的）"]]
         first_block, *rest_blocks = stock_blocks
         return [["", "◆ 三大法人買賣超（個股）", *first_block]] + rest_blocks
 
-    def _build_etf_rebalance_section(self, rebalance_events: list[RebalanceEvent]) -> list[list[str]]:
+    def _build_etf_rebalance_section(
+        self,
+        rebalance_events: list[RebalanceEvent],
+        industry_map: dict[str, str],
+        concept_map: dict[str, list[str]],
+    ) -> list[list[str]]:
         """所有有換倉的 ETF 合併進同一個「◆ ETF 換倉動態」大標題底下，每檔 ETF 用
         「- {etf_id}:」子標題區隔，不再像以前那樣每檔 ETF 各自起一個「◆」大標題。
         大標題只黏在第一檔 ETF 的 block 開頭出現一次；每檔 ETF 的子標題都跟該檔第一筆
@@ -109,7 +135,7 @@ class MessageFormatter:
         blocks: list[list[str]] = []
         is_first_etf = True
         for etf_id, events in self._group_by_etf(rebalance_events).items():
-            event_lines = self._format_events(events)
+            event_lines = self._group_and_format_events(events, industry_map, concept_map)
             if not event_lines:
                 continue
             first_line, *rest_lines = event_lines
@@ -160,7 +186,11 @@ class MessageFormatter:
         return lines
 
     def _format_stock_alert_blocks(
-        self, alerts: list[InstitutionalAlert], institutional_trades: list[dict]
+        self,
+        alerts: list[InstitutionalAlert],
+        institutional_trades: list[dict],
+        industry_map: dict[str, str],
+        concept_map: dict[str, list[str]],
     ) -> list[list[str]]:
         """每檔觸發門檻的股票各自組成一個 block（標題行＋明細行），分頁時才不會把
         同一檔股票的標題跟明細拆到不同則訊息裡。
@@ -173,13 +203,39 @@ class MessageFormatter:
             trade = trades_by_stock.get(alert.stock_id)
             if trade is None:
                 continue
-            blocks.append([self._format_stock_alert_line(trade, alert)])
+            blocks.append([self._format_stock_alert_line(trade, alert, industry_map, concept_map)])
         return blocks
 
     @staticmethod
-    def _format_stock_alert_line(trade: dict, alert: InstitutionalAlert) -> str:
+    def _classification_tags(
+        tier_label: str | None,
+        stock_id: str,
+        industry_map: dict[str, str],
+        concept_map: dict[str, list[str]],
+    ) -> list[str]:
+        """組出某股票要顯示的分類標籤：市值分級（如有）＋官方產業別（如查得到）＋
+        人工維護的概念標籤（可能有多個，全部一併列入）。三者皆無時回傳空陣列，
+        呼叫端據此決定要不要把整個 [] 省略。
+        """
+        tags = []
+        if tier_label:
+            tags.append(tier_label)
+        industry = industry_map.get(stock_id)
+        if industry:
+            tags.append(_display_industry(industry))
+        tags.extend(concept_map.get(stock_id, []))
+        return tags
+
+    def _format_stock_alert_line(
+        self,
+        trade: dict,
+        alert: InstitutionalAlert,
+        industry_map: dict[str, str],
+        concept_map: dict[str, list[str]],
+    ) -> str:
         tier_label = _TIER_LABELS.get(alert.market_cap_tier, "未知")
-        tags = [tier_label] + _STOCK_TRIGGER_TAGS[alert.trigger_type]
+        tags = self._classification_tags(tier_label, trade["stock_id"], industry_map, concept_map)
+        tag_part = f" [{', '.join(tags)}]" if tags else ""
 
         foreign_net = (trade["foreign_investor_buy"] - trade["foreign_investor_sell"]) + trade["foreign_dealer_self_net"]
         trust_net = trade["investment_trust_buy"] - trade["investment_trust_sell"]
@@ -196,7 +252,10 @@ class MessageFormatter:
             amount_yi = abs(alert.estimated_amount) / 1e8
             amount_part = f":{direction} {amount_yi:,.1f} 億元"
 
-        return f"  {trade['stock_id']} {trade['stock_name']} [{', '.join(tags)}]{amount_part} ({breakdown})"
+        trigger_tags = _STOCK_TRIGGER_TAGS[alert.trigger_type]
+        reason_and_breakdown = f"{', '.join(trigger_tags)}，{breakdown}"
+
+        return f"  {trade['stock_id']} {trade['stock_name']}{tag_part}{amount_part} ({reason_and_breakdown})"
 
     @staticmethod
     def _group_by_etf(events: list[RebalanceEvent]) -> dict[str, list[RebalanceEvent]]:
@@ -205,22 +264,52 @@ class MessageFormatter:
             grouped.setdefault(event.etf_id, []).append(event)
         return grouped
 
-    @staticmethod
-    def _format_events(events: list[RebalanceEvent]) -> list[str]:
-        lines = []
-        for e in events:
-            if e.event_type == RebalanceEventType.ADDITION:
-                lines.append(f"  新建倉：{e.component_stock_id} {e.component_name}（+{e.curr_shares:,} 股）")
-            elif e.event_type == RebalanceEventType.DELETION:
-                lines.append(f"  完全清倉：{e.component_stock_id} {e.component_name}")
-            else:
-                action = "加碼" if e.change_pct >= 0 else "減碼"
-                sign = "+" if e.change_pct >= 0 else ""
-                lines.append(
-                    f"  調倉{action}：{e.component_stock_id} {e.component_name}"
-                    f"（{sign}{e.curr_shares - e.prev_shares:,} 股，{sign}{e.change_pct:.1f}%）"
-                )
-        return lines
+    def _group_and_format_events(
+        self,
+        events: list[RebalanceEvent],
+        industry_map: dict[str, str],
+        concept_map: dict[str, list[str]],
+    ) -> list[str]:
+        """同一檔 ETF 底下的換倉項目依產業別分組相鄰顯示，組間順序就是這批事件裡
+        各產業第一次出現的順序；查無產業別的股票統一排在最後，組內維持原始事件順序。
+        """
+        order: list[str] = []
+        buckets: dict[str, list[RebalanceEvent]] = {}
+        for event in events:
+            key = industry_map.get(event.component_stock_id) or ""
+            if key not in buckets:
+                buckets[key] = []
+                order.append(key)
+            buckets[key].append(event)
+        if "" in order:
+            order.remove("")
+            order.append("")
+
+        return [
+            self._format_single_event(event, industry_map, concept_map)
+            for key in order
+            for event in buckets[key]
+        ]
+
+    def _format_single_event(
+        self,
+        e: RebalanceEvent,
+        industry_map: dict[str, str],
+        concept_map: dict[str, list[str]],
+    ) -> str:
+        tags = self._classification_tags(None, e.component_stock_id, industry_map, concept_map)
+        tag_part = f" [{', '.join(tags)}]" if tags else ""
+
+        if e.event_type == RebalanceEventType.ADDITION:
+            description = f"新建倉 +{e.curr_shares:,} 股"
+        elif e.event_type == RebalanceEventType.DELETION:
+            description = "完全清倉"
+        else:
+            action = "加碼" if e.change_pct >= 0 else "減碼"
+            sign = "+" if e.change_pct >= 0 else ""
+            description = f"調倉{action} {sign}{e.curr_shares - e.prev_shares:,} 股，{sign}{e.change_pct:.1f}%"
+
+        return f"  {e.component_stock_id} {e.component_name}{tag_part} ({description})"
 
 
 class LineClient:
@@ -256,9 +345,12 @@ class Notifier:
         stock_alerts: list[InstitutionalAlert],
         institutional_trades: list[dict],
         rebalance_events: list[RebalanceEvent],
+        industry_map: dict[str, str] | None = None,
+        concept_map: dict[str, list[str]] | None = None,
     ) -> bool:
         messages = self._formatter.format(
-            report_date, market_alerts, stock_alerts, institutional_trades, rebalance_events
+            report_date, market_alerts, stock_alerts, institutional_trades, rebalance_events,
+            industry_map, concept_map,
         )
         messages = self._cap_daily_messages(messages)
         batches = self._batch_messages(messages)

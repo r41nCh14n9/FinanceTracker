@@ -15,9 +15,10 @@ import sys
 from datetime import date, datetime
 
 from src.analyzer import InstitutionalTieredFilter, MarketInstitutionalFilter, RebalanceClassifier
+from src.classification import ClassificationService, invert_category_table
 from src.config import ConfigError, ConfigLoader
-from src.fetcher import Fetcher
-from src.models import PurgeResult
+from src.fetcher import Fetcher, FinMindClient
+from src.models import InstitutionalAlert, PurgeResult, RebalanceEvent
 from src.notifier import MessageFormatter, Notifier
 from src.storage import SnapshotRepository
 
@@ -101,9 +102,12 @@ def run(target_date: str, dry_run: bool = False) -> bool:
     rebalance_events = _classify_rebalance_events(config, storage, fetcher, target_date)
     storage.write_rebalance_events(target_date, rebalance_events)
 
+    industry_map, concept_map = _resolve_classification_tags(config, storage, stock_alerts, rebalance_events)
+
     if dry_run:
         messages = MessageFormatter().format(
-            target_date, market_alerts, stock_alerts, institutional_trades, rebalance_events
+            target_date, market_alerts, stock_alerts, institutional_trades, rebalance_events,
+            industry_map, concept_map,
         )
         for i, message in enumerate(messages, start=1):
             print(f"========== 訊息 {i}/{len(messages)} ==========")
@@ -111,7 +115,8 @@ def run(target_date: str, dry_run: bool = False) -> bool:
         return True
 
     return Notifier(config, storage).notify(
-        target_date, market_alerts, stock_alerts, institutional_trades, rebalance_events
+        target_date, market_alerts, stock_alerts, institutional_trades, rebalance_events,
+        industry_map, concept_map,
     )
 
 
@@ -162,6 +167,22 @@ def _evaluate_institutional_alerts(
         MarketInstitutionalFilter(config).filter_significant_trades(market_record) if market_record else []
     )
     return market_alerts, stock_alerts, institutional_trades
+
+
+def _resolve_classification_tags(
+    config: ConfigLoader,
+    storage: SnapshotRepository,
+    stock_alerts: list[InstitutionalAlert],
+    rebalance_events: list[RebalanceEvent],
+) -> tuple[dict[str, str], dict[str, list[str]]]:
+    """發送通知前，把本次通知會用到的股票（達門檻個股 + ETF 換倉成分股）補齊產業分類，
+    本地已有的不重打 FinMind；概念標籤則單純讀取人工維護的設定檔，不涉及任何查詢。
+    """
+    needed_stock_ids = sorted({a.stock_id for a in stock_alerts} | {e.component_stock_id for e in rebalance_events})
+    finmind_client = FinMindClient(config.get_env("FINMIND_TOKEN"))
+    industry_map = ClassificationService(finmind_client, storage).ensure_industry_categories(needed_stock_ids)
+    concept_map = invert_category_table(config.get_concept_tags())
+    return industry_map, concept_map
 
 
 def _classify_rebalance_events(

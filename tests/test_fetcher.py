@@ -155,6 +155,41 @@ def test_capital_stock_cache_malformed_content_treated_as_stale_not_crash(tmp_pa
     assert meta.sources[DataSourceKey.FINMIND_BALANCE_SHEET].status in (SnapshotStatus.OK, SnapshotStatus.NO_DATA)
 
 
+def test_fetch_stock_industry_returns_category_and_name():
+    client = FinMindClient(token="x")
+    resp = MagicMock()
+    resp.raise_for_status.return_value = None
+    resp.json.return_value = {
+        "data": [{"stock_id": "2330", "stock_name": "台積電", "industry_category": "半導體業"}]
+    }
+
+    with patch("src.fetcher.requests.get", return_value=resp):
+        result = client.fetch_stock_industry("2330")
+
+    assert result == {"stock_id": "2330", "stock_name": "台積電", "industry_category": "半導體業"}
+
+
+def test_fetch_stock_industry_returns_none_when_no_data():
+    client = FinMindClient(token="x")
+    resp = MagicMock()
+    resp.raise_for_status.return_value = None
+    resp.json.return_value = {"data": []}
+
+    with patch("src.fetcher.requests.get", return_value=resp):
+        result = client.fetch_stock_industry("9999")
+
+    assert result is None
+
+
+def test_fetch_stock_industry_raises_on_request_failure():
+    """單股查詢失敗時直接讓例外往外拋，由呼叫端（ClassificationService）決定要不要略過。"""
+    client = FinMindClient(token="x")
+
+    with patch("src.fetcher.requests.get", side_effect=requests.exceptions.Timeout("simulated timeout")):
+        with pytest.raises(RuntimeError):
+            client.fetch_stock_industry("2330")
+
+
 def test_fetch_trading_dates_returns_dates_from_response():
     client = FinMindClient(token="x")
     resp = MagicMock()

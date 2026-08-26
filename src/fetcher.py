@@ -154,6 +154,21 @@ class FinMindClient:
             "estimated_shares": capital_stock // _PAR_VALUE,
         }
 
+    def fetch_stock_industry(self, stock_id: str) -> dict | None:
+        """查詢單一股票的官方產業別／名稱，供分類標籤功能使用；查無資料回傳 None，
+        呼叫失敗直接讓例外往外拋，由呼叫端決定要不要略過。
+        """
+        resp = self._get(dataset="TaiwanStockInfo", data_id=stock_id)
+        rows = resp.get("data", [])
+        if not rows:
+            return None
+        row = rows[-1]
+        return {
+            "stock_id": stock_id,
+            "stock_name": row.get("stock_name", ""),
+            "industry_category": row.get("industry_category", ""),
+        }
+
     def fetch_market_institutional(self, trade_date: str) -> dict | None:
         """查詢大盤三大法人買賣金額，不帶 data_id，每次執行只需要呼叫一次。"""
         resp = self._get(

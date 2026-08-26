@@ -2,12 +2,15 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from pathlib import Path
 
 from dotenv import load_dotenv
 
 from src.models import MarketCapTier
+
+logger = logging.getLogger(__name__)
 
 _TIER_KEY_BY_ENUM = {
     MarketCapTier.LARGE: "large",
@@ -29,6 +32,7 @@ class ConfigLoader:
         self._broker_branches = self._load_json("broker_branches.json")
         self._watchlist = self._load_json("watchlist.json")
         self._issuer_registry = self._load_json("issuer_registry.json")
+        self._concept_tags = self._load_json_optional("concept_tags.json")
         self._etf_issuer_key = {}  # etf_id -> issuer 鍵，_validate() 時建好，查表用
         self._validate()
 
@@ -41,6 +45,20 @@ class ConfigLoader:
                 return json.load(f)
         except json.JSONDecodeError as exc:
             raise ConfigError(f"設定檔格式錯誤：{path}（{exc}）") from exc
+
+    def _load_json_optional(self, filename: str) -> dict:
+        """給選填設定檔用：檔案不存在或格式錯誤都不中止程式，直接視為空物件；
+        這類檔案只是錦上添花的裝飾功能，不該有能力擋下整個每日通知流程。
+        """
+        path = self._config_dir / filename
+        if not path.exists():
+            return {}
+        try:
+            with path.open("r", encoding="utf-8") as f:
+                return json.load(f)
+        except json.JSONDecodeError as exc:
+            logger.warning("選填設定檔格式錯誤，本次視為空（%s）：%s", path, exc)
+            return {}
 
     def _validate(self) -> None:
         if "default" not in self._thresholds:
@@ -119,6 +137,10 @@ class ConfigLoader:
 
     def get_watchlist_etfs(self) -> list[str]:
         return list(self._watchlist["etfs"])
+
+    # --- 概念股標籤（人工維護，選填檔案；結構同 industry_tags.json：分類 -> 成員清單） ---
+    def get_concept_tags(self) -> dict:
+        return self._concept_tags
 
     # --- ETF 發行投信對照（決定用哪個 Adapter、打哪個 URL） ---
     def get_issuer_mapping(self, etf_id: str) -> dict:
