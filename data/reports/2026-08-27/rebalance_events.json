@@ -1,0 +1,162 @@
+[
+  {
+    "event_date": "2026-08-27",
+    "etf_id": "00878",
+    "component_stock_id": "3293",
+    "component_name": "鈊  象",
+    "event_type": "REBALANCE",
+    "prev_shares": 8886000,
+    "curr_shares": 7686000,
+    "change_pct": -13.50438892640108
+  },
+  {
+    "event_date": "2026-08-27",
+    "etf_id": "00981A",
+    "component_stock_id": "6187",
+    "component_name": "萬潤",
+    "event_type": "REBALANCE",
+    "prev_shares": 483000,
+    "curr_shares": 283000,
+    "change_pct": -41.40786749482402
+  },
+  {
+    "event_date": "2026-08-27",
+    "etf_id": "00981A",
+    "component_stock_id": "5274",
+    "component_name": "信驊",
+    "event_type": "REBALANCE",
+    "prev_shares": 383900,
+    "curr_shares": 341900,
+    "change_pct": -10.940349049231571
+  },
+  {
+    "event_date": "2026-08-27",
+    "etf_id": "00981A",
+    "component_stock_id": "4979",
+    "component_name": "華星光",
+    "event_type": "REBALANCE",
+    "prev_shares": 2424000,
+    "curr_shares": 3173000,
+    "change_pct": 30.899339933993396
+  },
+  {
+    "event_date": "2026-08-27",
+    "etf_id": "00991A",
+    "component_stock_id": "6223",
+    "component_name": "旺矽科技",
+    "event_type": "REBALANCE",
+    "prev_shares": 560000,
+    "curr_shares": 460000,
+    "change_pct": -17.857142857142858
+  },
+  {
+    "event_date": "2026-08-27",
+    "etf_id": "00991A",
+    "component_stock_id": "3081",
+    "component_name": "聯亞光電",
+    "event_type": "REBALANCE",
+    "prev_shares": 700000,
+    "curr_shares": 800000,
+    "change_pct": 14.285714285714285
+  },
+  {
+    "event_date": "2026-08-27",
+    "etf_id": "00403A",
+    "component_stock_id": "3008",
+    "component_name": "大立光",
+    "event_type": "REBALANCE",
+    "prev_shares": 626000,
+    "curr_shares": 700000,
+    "change_pct": 11.821086261980831
+  },
+  {
+    "event_date": "2026-08-27",
+    "etf_id": "00403A",
+    "component_stock_id": "1560",
+    "component_name": "中砂",
+    "event_type": "REBALANCE",
+    "prev_shares": 393000,
+    "curr_shares": 300000,
+    "change_pct": -23.66412213740458
+  },
+  {
+    "event_date": "2026-08-27",
+    "etf_id": "00403A",
+    "component_stock_id": "4958",
+    "component_name": "臻鼎-KY",
+    "event_type": "REBALANCE",
+    "prev_shares": 500000,
+    "curr_shares": 1000,
+    "change_pct": -99.8
+  },
+  {
+    "event_date": "2026-08-27",
+    "etf_id": "00403A",
+    "component_stock_id": "2303",
+    "component_name": "聯電",
+    "event_type": "REBALANCE",
+    "prev_shares": 60000000,
+    "curr_shares": 50000000,
+    "change_pct": -16.666666666666664
+  },
+  {
+    "event_date": "2026-08-27",
+    "etf_id": "00403A",
+    "component_stock_id": "3711",
+    "component_name": "日月光投控",
+    "event_type": "REBALANCE",
+    "prev_shares": 8000000,
+    "curr_shares": 7000000,
+    "change_pct": -12.5
+  },
+  {
+    "event_date": "2026-08-27",
+    "etf_id": "00407A",
+    "component_stock_id": "2303",
+    "component_name": "聯電",
+    "event_type": "REBALANCE",
+    "prev_shares": 3366000,
+    "curr_shares": 2146000,
+    "change_pct": -36.244800950683306
+  },
+  {
+    "event_date": "2026-08-27",
+    "etf_id": "00407A",
+    "component_stock_id": "6223",
+    "component_name": "旺矽",
+    "event_type": "REBALANCE",
+    "prev_shares": 157000,
+    "curr_shares": 137000,
+    "change_pct": -12.738853503184714
+  },
+  {
+    "event_date": "2026-08-27",
+    "etf_id": "00407A",
+    "component_stock_id": "3081",
+    "component_name": "聯亞",
+    "event_type": "REBALANCE",
+    "prev_shares": 90000,
+    "curr_shares": 130000,
+    "change_pct": 44.44444444444444
+  },
+  {
+    "event_date": "2026-08-27",
+    "etf_id": "00407A",
+    "component_stock_id": "6515",
+    "component_name": "穎崴",
+    "event_type": "REBALANCE",
+    "prev_shares": 59000,
+    "curr_shares": 9000,
+    "change_pct": -84.7457627118644
+  },
+  {
+    "event_date": "2026-08-27",
+    "etf_id": "00407A",
+    "component_stock_id": "8996",
+    "component_name": "高力",
+    "event_type": "REBALANCE",
+    "prev_shares": 161000,
+    "curr_shares": 221000,
+    "change_pct": 37.267080745341616
+  }
+]
