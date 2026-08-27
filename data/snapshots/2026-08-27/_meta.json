@@ -3,27 +3,27 @@
   "sources": {
     "FINMIND_INSTITUTIONAL": {
       "status": "OK",
-      "fetched_at": "2026-08-27T14:20:46.847524+00:00",
+      "fetched_at": "2026-08-27T21:24:31.262049+00:00",
       "error_message": null
     },
     "FINMIND_PRICE": {
       "status": "OK",
-      "fetched_at": "2026-08-27T14:20:47.929464+00:00",
+      "fetched_at": "2026-08-27T21:24:32.256708+00:00",
       "error_message": null
     },
     "FINMIND_BALANCE_SHEET": {
       "status": "OK",
-      "fetched_at": "2026-08-27T14:20:47.929626+00:00",
+      "fetched_at": "2026-08-27T21:24:32.256891+00:00",
       "error_message": null
     },
     "FINMIND_MARKET": {
       "status": "OK",
-      "fetched_at": "2026-08-27T14:20:48.334691+00:00",
+      "fetched_at": "2026-08-27T21:24:32.832316+00:00",
       "error_message": null
     },
     "ISSUER_PCF": {
       "status": "OK",
-      "fetched_at": "2026-08-27T14:21:09.530172+00:00",
+      "fetched_at": "2026-08-27T21:24:54.127238+00:00",
       "error_message": null
     }
   },

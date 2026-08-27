@@ -12,12 +12,12 @@
   {
     "event_date": "2026-08-27",
     "etf_id": "00981A",
-    "component_stock_id": "6187",
-    "component_name": "萬潤",
+    "component_stock_id": "4979",
+    "component_name": "華星光",
     "event_type": "REBALANCE",
-    "prev_shares": 483000,
-    "curr_shares": 283000,
-    "change_pct": -41.40786749482402
+    "prev_shares": 2424000,
+    "curr_shares": 3173000,
+    "change_pct": 30.899339933993396
   },
   {
     "event_date": "2026-08-27",
@@ -32,12 +32,12 @@
   {
     "event_date": "2026-08-27",
     "etf_id": "00981A",
-    "component_stock_id": "4979",
-    "component_name": "華星光",
+    "component_stock_id": "6187",
+    "component_name": "萬潤",
     "event_type": "REBALANCE",
-    "prev_shares": 2424000,
-    "curr_shares": 3173000,
-    "change_pct": 30.899339933993396
+    "prev_shares": 483000,
+    "curr_shares": 283000,
+    "change_pct": -41.40786749482402
   },
   {
     "event_date": "2026-08-27",
@@ -62,12 +62,12 @@
   {
     "event_date": "2026-08-27",
     "etf_id": "00403A",
-    "component_stock_id": "3008",
-    "component_name": "大立光",
+    "component_stock_id": "3711",
+    "component_name": "日月光投控",
     "event_type": "REBALANCE",
-    "prev_shares": 626000,
-    "curr_shares": 700000,
-    "change_pct": 11.821086261980831
+    "prev_shares": 8000000,
+    "curr_shares": 7000000,
+    "change_pct": -12.5
   },
   {
     "event_date": "2026-08-27",
@@ -78,6 +78,16 @@
     "prev_shares": 393000,
     "curr_shares": 300000,
     "change_pct": -23.66412213740458
+  },
+  {
+    "event_date": "2026-08-27",
+    "etf_id": "00403A",
+    "component_stock_id": "3008",
+    "component_name": "大立光",
+    "event_type": "REBALANCE",
+    "prev_shares": 626000,
+    "curr_shares": 700000,
+    "change_pct": 11.821086261980831
   },
   {
     "event_date": "2026-08-27",
@@ -101,26 +111,6 @@
   },
   {
     "event_date": "2026-08-27",
-    "etf_id": "00403A",
-    "component_stock_id": "3711",
-    "component_name": "日月光投控",
-    "event_type": "REBALANCE",
-    "prev_shares": 8000000,
-    "curr_shares": 7000000,
-    "change_pct": -12.5
-  },
-  {
-    "event_date": "2026-08-27",
-    "etf_id": "00407A",
-    "component_stock_id": "2303",
-    "component_name": "聯電",
-    "event_type": "REBALANCE",
-    "prev_shares": 3366000,
-    "curr_shares": 2146000,
-    "change_pct": -36.244800950683306
-  },
-  {
-    "event_date": "2026-08-27",
     "etf_id": "00407A",
     "component_stock_id": "6223",
     "component_name": "旺矽",
@@ -128,6 +118,16 @@
     "prev_shares": 157000,
     "curr_shares": 137000,
     "change_pct": -12.738853503184714
+  },
+  {
+    "event_date": "2026-08-27",
+    "etf_id": "00407A",
+    "component_stock_id": "6515",
+    "component_name": "穎崴",
+    "event_type": "REBALANCE",
+    "prev_shares": 59000,
+    "curr_shares": 9000,
+    "change_pct": -84.7457627118644
   },
   {
     "event_date": "2026-08-27",
@@ -142,12 +142,12 @@
   {
     "event_date": "2026-08-27",
     "etf_id": "00407A",
-    "component_stock_id": "6515",
-    "component_name": "穎崴",
+    "component_stock_id": "2303",
+    "component_name": "聯電",
     "event_type": "REBALANCE",
-    "prev_shares": 59000,
-    "curr_shares": 9000,
-    "change_pct": -84.7457627118644
+    "prev_shares": 3366000,
+    "curr_shares": 2146000,
+    "change_pct": -36.244800950683306
   },
   {
     "event_date": "2026-08-27",
