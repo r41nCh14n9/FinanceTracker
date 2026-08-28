@@ -73,6 +73,7 @@ def _quiet_finmind():
     finmind.fetch_market_institutional.return_value = None
     finmind.fetch_broker_trades.return_value = []
     finmind.fetch_trading_dates.return_value = []
+    finmind.fetch_stock_industry.return_value = None
     return finmind
 
 
@@ -139,6 +140,62 @@ def test_is_trading_day_true_when_institutional_data_present(tmp_path):
     meta = fetcher.fetch_all("2026-08-05")
 
     assert meta.is_trading_day is True
+
+
+def _institutional_row(stock_id):
+    return {
+        "stock_id": stock_id, "trade_date": "2026-08-05",
+        "foreign_investor_buy": 1, "foreign_investor_sell": 0, "foreign_dealer_self_net": 0,
+        "investment_trust_buy": 0, "investment_trust_sell": 0,
+        "dealer_self_net": 0, "dealer_hedging_net": 0, "total_net": 1,
+    }
+
+
+def test_institutional_trades_reuse_stock_name_already_known_from_industry_tags(tmp_path):
+    """名稱已經在 industry_tags.json 裡（ClassificationService 之前累積的），
+    就不該為了名稱再另外打一次 FinMind。
+    """
+    storage = _make_repo(tmp_path)
+    storage.write_industry_tags({"半導體業": {"members": [{"stock_id": "2330", "stock_name": "台積電"}]}})
+    finmind = _quiet_finmind()
+    finmind.fetch_institutional_trades.return_value = [_institutional_row("2330")]
+    fetcher = Fetcher(_FakeConfig(stocks=["2330"]), storage, finmind_client=finmind, issuer_providers=_quiet_issuer_providers())
+
+    fetcher.fetch_all("2026-08-05")
+
+    saved = storage.read_institutional_trades("2026-08-05")
+    assert saved[0]["stock_name"] == "台積電"
+    finmind.fetch_stock_industry.assert_not_called()
+
+
+def test_institutional_trades_queries_finmind_when_stock_name_unknown(tmp_path):
+    storage = _make_repo(tmp_path)
+    finmind = _quiet_finmind()
+    finmind.fetch_institutional_trades.return_value = [_institutional_row("3661")]
+    finmind.fetch_stock_industry.return_value = {
+        "stock_id": "3661", "stock_name": "世芯-KY", "industry_category": "半導體業",
+    }
+    fetcher = Fetcher(_FakeConfig(stocks=["3661"]), storage, finmind_client=finmind, issuer_providers=_quiet_issuer_providers())
+
+    fetcher.fetch_all("2026-08-05")
+
+    saved = storage.read_institutional_trades("2026-08-05")
+    assert saved[0]["stock_name"] == "世芯-KY"
+    finmind.fetch_stock_industry.assert_called_once_with("3661")
+
+
+def test_institutional_trades_falls_back_to_stock_id_when_name_lookup_fails(tmp_path):
+    """名稱查詢失敗或查無資料時，用股票代碼頂著，不能讓整批三大法人資料因此掛掉。"""
+    storage = _make_repo(tmp_path)
+    finmind = _quiet_finmind()
+    finmind.fetch_institutional_trades.return_value = [_institutional_row("9999")]
+    finmind.fetch_stock_industry.side_effect = RuntimeError("boom")
+    fetcher = Fetcher(_FakeConfig(stocks=["9999"]), storage, finmind_client=finmind, issuer_providers=_quiet_issuer_providers())
+
+    fetcher.fetch_all("2026-08-05")
+
+    saved = storage.read_institutional_trades("2026-08-05")
+    assert saved[0]["stock_name"] == "9999"
 
 
 def test_capital_stock_cache_malformed_content_treated_as_stale_not_crash(tmp_path):

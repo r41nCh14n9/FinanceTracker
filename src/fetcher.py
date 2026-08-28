@@ -13,6 +13,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import re
+from collections.abc import Iterable
 from datetime import datetime, timedelta, timezone
 
 import requests
@@ -55,10 +56,6 @@ _TRADING_DAY_SOURCES = frozenset({
     DataSourceKey.FINMIND_BROKER,
     DataSourceKey.ISSUER_PCF,
 })
-
-# TaiwanStockInstitutionalInvestorsBuySell / TaiwanStockTotalInstitutionalInvestors
-# 都不含股票中文名稱欄位，暫時用這張表頂著；監控清單擴增時要換成動態查詢（見 IMPL 文件待辦）。
-_STOCK_NAME_FALLBACK = {"2330": "台積電", "2454": "聯發科"}
 
 
 class FinMindClient:
@@ -393,9 +390,38 @@ class Fetcher:
         if not raw_rows:
             return SourceStatus(status=SnapshotStatus.NO_DATA)
 
-        records = [self._to_institutional_trade_record(row) for row in raw_rows]
+        stock_names = self._resolve_stock_names(row["stock_id"] for row in raw_rows)
+        records = [self._to_institutional_trade_record(row, stock_names) for row in raw_rows]
         self._storage.write_institutional_trades(snapshot_date, records)
         return SourceStatus(status=SnapshotStatus.OK, fetched_at=self._now())
+
+    def _resolve_stock_names(self, stock_ids: Iterable[str]) -> dict[str, str]:
+        """三大法人買賣超這支 API 本身不含股票中文名稱，需要另外查。優先沿用
+        ClassificationService 已經累積在 industry_tags.json 裡的名稱，避免重複打 FinMind；
+        本地沒有的才即時查一次，單一股票查詢失敗就跳過，不能讓名稱查詢拖累整批資料。
+        """
+        known = self._known_stock_names(self._storage.read_industry_tags())
+        names: dict[str, str] = {}
+        for stock_id in dict.fromkeys(stock_ids):  # 去重，同時保留原始出現順序
+            if stock_id in known:
+                names[stock_id] = known[stock_id]
+                continue
+            try:
+                info = self._finmind_client.fetch_stock_industry(stock_id)
+            except Exception as exc:  # noqa: BLE001 - 名稱查詢失敗不能拖累其他股票或整批資料
+                logger.warning("股票名稱查詢失敗（%s）：%s", stock_id, exc)
+                continue
+            if info and info.get("stock_name"):
+                names[stock_id] = info["stock_name"]
+        return names
+
+    @staticmethod
+    def _known_stock_names(industry_tags: dict) -> dict[str, str]:
+        names = {}
+        for entry in industry_tags.values():
+            for member in entry.get("members", []):
+                names[member["stock_id"]] = member["stock_name"]
+        return names
 
     def _fetch_stock_trading(self, snapshot_date: str) -> SourceStatus:
         try:
@@ -571,11 +597,13 @@ class Fetcher:
         adapter_cls = ADAPTER_REGISTRY[mapping["adapter"]]
         return adapter_cls()
 
-    def _to_institutional_trade_record(self, row: dict) -> InstitutionalTradeRecord:
+    @staticmethod
+    def _to_institutional_trade_record(row: dict, stock_names: dict[str, str]) -> InstitutionalTradeRecord:
+        stock_id = row["stock_id"]
         return InstitutionalTradeRecord(
             trade_date=row["trade_date"],
-            stock_id=row["stock_id"],
-            stock_name=_STOCK_NAME_FALLBACK.get(row["stock_id"], row["stock_id"]),
+            stock_id=stock_id,
+            stock_name=stock_names.get(stock_id, stock_id),
             foreign_investor_buy=row["foreign_investor_buy"],
             foreign_investor_sell=row["foreign_investor_sell"],
             foreign_dealer_self_net=row["foreign_dealer_self_net"],

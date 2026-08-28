@@ -155,7 +155,7 @@ def test_message_formatter_appends_industry_and_concept_tags_to_stock_alert():
         "2026-08-05", [], stock_alerts, [_institutional_trade()], [], industry_map, concept_map
     )
 
-    assert "[大型, 半導體, IC 製造, 先進封裝]" in "\n".join(messages)
+    assert "[半導體, 大型, IC 製造, 先進封裝]" in "\n".join(messages)
 
 
 def test_message_formatter_omits_brackets_when_no_classification_available():
