@@ -213,16 +213,17 @@ class MessageFormatter:
         industry_map: dict[str, str],
         concept_map: dict[str, list[str]],
     ) -> list[str]:
-        """組出某股票要顯示的分類標籤：市值分級（如有）＋官方產業別（如查得到）＋
-        人工維護的概念標籤（可能有多個，全部一併列入）。三者皆無時回傳空陣列，
-        呼叫端據此決定要不要把整個 [] 省略。
+        """組出某股票要顯示的分類標籤：官方產業別（如查得到）＋市值分級（如有）＋
+        人工維護的概念標籤（可能有多個，全部一併列入）。產業別排最前面，這樣同產業的
+        股票即使沒有相鄰顯示，光看標籤第一個字也能一眼認出彼此是同一組。三者皆無時
+        回傳空陣列，呼叫端據此決定要不要把整個 [] 省略。
         """
         tags = []
-        if tier_label:
-            tags.append(tier_label)
         industry = industry_map.get(stock_id)
         if industry:
             tags.append(_display_industry(industry))
+        if tier_label:
+            tags.append(tier_label)
         tags.extend(concept_map.get(stock_id, []))
         return tags
 

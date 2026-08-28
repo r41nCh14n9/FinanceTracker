@@ -36,6 +36,21 @@
   不建立此檔案時，概念標籤功能形同未啟用，不影響其餘功能。
 - **`--dry-run` 預覽**：分類標籤與分組排序在 `--dry-run` 模式下同樣會執行並顯示在預覽輸出中，方便維運人員在正式推播前確認效果。
 
+## 追加修正：三大法人買賣超個股名稱錯誤顯示為代碼
+
+上線後發現 `watchlist.json` 監控清單擴增後，簡報上多檔股票的中文名稱顯示成代碼本身（如「5483 5483」）。追查是既有 `Fetcher._to_institutional_trade_record` 一直靠一張只涵蓋 2330／2454 的寫死對照表 `_STOCK_NAME_FALLBACK` 頂著名稱（`TaiwanStockInstitutionalInvestorsBuySell` 這支 API 本身不含中文名稱欄位），不在表裡的股票就直接拿代碼當名稱顯示——這是既有限制，程式碼原本的註解也已寫明「監控清單擴增時要換成動態查詢」，非本次分類功能造成的迴歸。
+
+順勢一併修正（本次分類功能剛好已經在打會回傳正確名稱的 `TaiwanStockInfo`，可以直接複用）：
+
+- 移除 `_STOCK_NAME_FALLBACK` 寫死對照表。
+- `Fetcher` 新增 `_resolve_stock_names()`：優先沿用 `industry_tags.json` 裡 `ClassificationService` 已經查過的正確名稱（不重打 API）；本地沒有的才即時呼叫 `FinMindClient.fetch_stock_industry()` 補查一次；單一股票查詢失敗就用代碼頂著，不拖累其他股票或整批資料。
+- `_to_institutional_trade_record` 改為 `@staticmethod`，改吃外部傳入的 `stock_names` 對照表，不再依賴寫死常數。
+- 新增對應測試：本地已知名稱不重打 API、本地未知時會查 FinMind、查詢失敗時退回代碼顯示。
+
+## 追加調整：分類標籤排列順序
+
+原設計 `[]` 內標籤順序為「市值分級 → 產業別 → 概念標籤」，依使用者指示改為**「產業別 → 市值分級 → 概念標籤」**：`MessageFormatter._classification_tags()` 內產業別改先組入陣列。理由是產業別排最前面時，即使個股買賣超區塊本身沒有像 ETF 區塊那樣實際依產業分組排列，讀者掃視標籤第一項也能一眼認出哪些股票屬於同一產業，跟 ETF 區塊「同產業相鄰顯示」的視覺邏輯一致。已同步更新 `tests/test_notifier.py` 的斷言與 SD 文件§四／§六。
+
 ## 待辦與已知限制
 
 - FinMind 產業別查詢失敗或查無資料時**不會快取負面結果**，代表同一檔查不到分類的股票，只要之後持續出現在通知內容中，就會每天重新嘗試呼叫 FinMind——這是 SD 明確定案的設計（避免暫時性失敗被誤判為永久無分類），非本次遺漏。
