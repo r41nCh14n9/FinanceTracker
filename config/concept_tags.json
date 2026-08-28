@@ -1,10 +1,214 @@
 {
-    "IC 設計": {
-        "members": [
-            {
-                "stock_id": "3529",
-                "stock_name": "力旺"
-            }
-        ]
-    }
+  "半導體": {
+    "members": [
+      {
+        "stock_id": "2330",
+        "stock_name": "台積電"
+      },
+      {
+        "stock_id": "3711",
+        "stock_name": "日月光投控"
+      },
+      {
+        "stock_id": "3680",
+        "stock_name": "家登"
+      }
+    ]
+  },
+  "矽晶圓": {
+    "members": [
+      {
+        "stock_id": "6488",
+        "stock_name": "環球晶"
+      },
+      {
+        "stock_id": "5483",
+        "stock_name": "中美晶"
+      },
+      {
+        "stock_id": "3532",
+        "stock_name": "台勝科"
+      }
+    ]
+  },
+  "IC設計": {
+    "members": [
+      {
+        "stock_id": "2454",
+        "stock_name": "聯發科"
+      },
+      {
+        "stock_id": "3661",
+        "stock_name": "世芯-KY"
+      },
+      {
+        "stock_id": "3529",
+        "stock_name": "力旺"
+      }
+    ]
+  },
+  "光通信": {
+    "members": [
+      {
+        "stock_id": "2345",
+        "stock_name": "智邦"
+      },
+      {
+        "stock_id": "3081",
+        "stock_name": "聯亞"
+      },
+      {
+        "stock_id": "3363",
+        "stock_name": "上詮"
+      }
+    ]
+  },
+  "電源": {
+    "members": [
+      {
+        "stock_id": "2308",
+        "stock_name": "台達電"
+      },
+      {
+        "stock_id": "2301",
+        "stock_name": "光寶科"
+      },
+      {
+        "stock_id": "6409",
+        "stock_name": "旭隼"
+      }
+    ]
+  },
+  "被動": {
+    "members": [
+      {
+        "stock_id": "2327",
+        "stock_name": "國巨"
+      },
+      {
+        "stock_id": "2492",
+        "stock_name": "華新科"
+      },
+      {
+        "stock_id": "2456",
+        "stock_name": "奇力新"
+      }
+    ]
+  },
+  "金融": {
+    "members": [
+      {
+        "stock_id": "2881",
+        "stock_name": "富邦金"
+      },
+      {
+        "stock_id": "2882",
+        "stock_name": "國泰金"
+      },
+      {
+        "stock_id": "2891",
+        "stock_name": "中信金"
+      }
+    ]
+  },
+  "ABF載板": {
+    "members": [
+      {
+        "stock_id": "3037",
+        "stock_name": "欣興"
+      },
+      {
+        "stock_id": "8046",
+        "stock_name": "南電"
+      },
+      {
+        "stock_id": "3189",
+        "stock_name": "景碩"
+      }
+    ]
+  },
+  "軍工": {
+    "members": [
+      {
+        "stock_id": "2634",
+        "stock_name": "漢翔"
+      },
+      {
+        "stock_id": "2645",
+        "stock_name": "長榮航太"
+      },
+      {
+        "stock_id": "8222",
+        "stock_name": "寶一"
+      }
+    ]
+  },
+  "衛星": {
+    "members": [
+      {
+        "stock_id": "2313",
+        "stock_name": "華通"
+      },
+      {
+        "stock_id": "6285",
+        "stock_name": "啟碁"
+      },
+      {
+        "stock_id": "3491",
+        "stock_name": "昇達科"
+      }
+    ]
+  },
+  "伺服器代工": {
+    "members": [
+      {
+        "stock_id": "2317",
+        "stock_name": "鴻海"
+      },
+      {
+        "stock_id": "2382",
+        "stock_name": "廣達"
+      },
+      {
+        "stock_id": "6669",
+        "stock_name": "緯穎"
+      }
+    ]
+  },
+  "電腦": {
+    "members": [
+      {
+        "stock_id": "2357",
+        "stock_name": "華碩"
+      },
+      {
+        "stock_id": "2324",
+        "stock_name": "仁寶"
+      },
+      {
+        "stock_id": "2356",
+        "stock_name": "英業達"
+      }
+    ]
+  },
+  "機器人": {
+    "members": [
+      {
+        "stock_id": "2049",
+        "stock_name": "上銀"
+      },
+      {
+        "stock_id": "2359",
+        "stock_name": "所羅門"
+      },
+      {
+        "stock_id": "2464",
+        "stock_name": "盟立"
+      },
+      {
+        "stock_id": "6188",
+        "stock_name": "廣明"
+      }
+    ]
+  }
 }
