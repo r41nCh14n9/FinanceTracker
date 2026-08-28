@@ -1,0 +1,31 @@
+{
+  "snapshot_date": "2026-08-28",
+  "sources": {
+    "FINMIND_INSTITUTIONAL": {
+      "status": "OK",
+      "fetched_at": "2026-08-28T16:17:44.921739+00:00",
+      "error_message": null
+    },
+    "FINMIND_PRICE": {
+      "status": "OK",
+      "fetched_at": "2026-08-28T16:18:27.755318+00:00",
+      "error_message": null
+    },
+    "FINMIND_BALANCE_SHEET": {
+      "status": "OK",
+      "fetched_at": "2026-08-28T16:18:45.036949+00:00",
+      "error_message": null
+    },
+    "FINMIND_MARKET": {
+      "status": "OK",
+      "fetched_at": "2026-08-28T16:18:45.779107+00:00",
+      "error_message": null
+    },
+    "ISSUER_PCF": {
+      "status": "OK",
+      "fetched_at": "2026-08-28T16:19:07.214279+00:00",
+      "error_message": null
+    }
+  },
+  "is_trading_day": true
+}
