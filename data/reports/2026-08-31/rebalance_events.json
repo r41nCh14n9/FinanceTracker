@@ -1,0 +1,152 @@
+[
+  {
+    "event_date": "2026-08-31",
+    "etf_id": "00878",
+    "component_stock_id": "3293",
+    "component_name": "鈊  象",
+    "event_type": "REBALANCE",
+    "prev_shares": 6186000,
+    "curr_shares": 4186000,
+    "change_pct": -32.33107015842224
+  },
+  {
+    "event_date": "2026-08-31",
+    "etf_id": "00981A",
+    "component_stock_id": "6805",
+    "component_name": "富世達",
+    "event_type": "REBALANCE",
+    "prev_shares": 2264000,
+    "curr_shares": 1731000,
+    "change_pct": -23.542402826855124
+  },
+  {
+    "event_date": "2026-08-31",
+    "etf_id": "00981A",
+    "component_stock_id": "5274",
+    "component_name": "信驊",
+    "event_type": "REBALANCE",
+    "prev_shares": 313900,
+    "curr_shares": 207900,
+    "change_pct": -33.768716151640646
+  },
+  {
+    "event_date": "2026-08-31",
+    "etf_id": "00981A",
+    "component_stock_id": "2368",
+    "component_name": "金像電",
+    "event_type": "REBALANCE",
+    "prev_shares": 1957000,
+    "curr_shares": 1457000,
+    "change_pct": -25.54931016862545
+  },
+  {
+    "event_date": "2026-08-31",
+    "etf_id": "00981A",
+    "component_stock_id": "2313",
+    "component_name": "華通",
+    "event_type": "REBALANCE",
+    "prev_shares": 1000,
+    "curr_shares": 501000,
+    "change_pct": 50000.0
+  },
+  {
+    "event_date": "2026-08-31",
+    "etf_id": "00981A",
+    "component_stock_id": "6187",
+    "component_name": "萬潤",
+    "event_type": "REBALANCE",
+    "prev_shares": 88000,
+    "curr_shares": 8000,
+    "change_pct": -90.9090909090909
+  },
+  {
+    "event_date": "2026-08-31",
+    "etf_id": "00991A",
+    "component_stock_id": "7769",
+    "component_name": "鴻勁精密",
+    "event_type": "REBALANCE",
+    "prev_shares": 360000,
+    "curr_shares": 300000,
+    "change_pct": -16.666666666666664
+  },
+  {
+    "event_date": "2026-08-31",
+    "etf_id": "00991A",
+    "component_stock_id": "3081",
+    "component_name": "聯亞光電",
+    "event_type": "REBALANCE",
+    "prev_shares": 800000,
+    "curr_shares": 900000,
+    "change_pct": 12.5
+  },
+  {
+    "event_date": "2026-08-31",
+    "etf_id": "00991A",
+    "component_stock_id": "2454",
+    "component_name": "聯發科技",
+    "event_type": "REBALANCE",
+    "prev_shares": 1000000,
+    "curr_shares": 900000,
+    "change_pct": -10.0
+  },
+  {
+    "event_date": "2026-08-31",
+    "etf_id": "00991A",
+    "component_stock_id": "6274",
+    "component_name": "台燿科技",
+    "event_type": "REBALANCE",
+    "prev_shares": 2400000,
+    "curr_shares": 2000000,
+    "change_pct": -16.666666666666664
+  },
+  {
+    "event_date": "2026-08-31",
+    "etf_id": "00992A",
+    "component_stock_id": "2308",
+    "component_name": "台達電",
+    "event_type": "REBALANCE",
+    "prev_shares": 632000,
+    "curr_shares": 382000,
+    "change_pct": -39.55696202531646
+  },
+  {
+    "event_date": "2026-08-31",
+    "etf_id": "00403A",
+    "component_stock_id": "2455",
+    "component_name": "全新",
+    "event_type": "REBALANCE",
+    "prev_shares": 200000,
+    "curr_shares": 386000,
+    "change_pct": 93.0
+  },
+  {
+    "event_date": "2026-08-31",
+    "etf_id": "00403A",
+    "component_stock_id": "3189",
+    "component_name": "景碩",
+    "event_type": "REBALANCE",
+    "prev_shares": 4550000,
+    "curr_shares": 3400000,
+    "change_pct": -25.274725274725274
+  },
+  {
+    "event_date": "2026-08-31",
+    "etf_id": "00403A",
+    "component_stock_id": "2449",
+    "component_name": "京元電子",
+    "event_type": "ADDITION",
+    "prev_shares": 0,
+    "curr_shares": 500000,
+    "change_pct": null
+  },
+  {
+    "event_date": "2026-08-31",
+    "etf_id": "00407A",
+    "component_stock_id": "3008",
+    "component_name": "大立光",
+    "event_type": "REBALANCE",
+    "prev_shares": 31000,
+    "curr_shares": 55000,
+    "change_pct": 77.41935483870968
+  }
+]
