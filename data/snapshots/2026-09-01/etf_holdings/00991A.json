@@ -1,0 +1,352 @@
+[
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "2330",
+    "component_name": "台灣積體",
+    "holding_shares": 3800000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "2383",
+    "component_name": "台光電子",
+    "holding_shares": 1380000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "2408",
+    "component_name": "南亞科技",
+    "holding_shares": 13800000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "2059",
+    "component_name": "川湖科技",
+    "holding_shares": 500000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "3037",
+    "component_name": "欣興電子",
+    "holding_shares": 5000000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "6669",
+    "component_name": "緯穎科技",
+    "holding_shares": 580000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "3017",
+    "component_name": "奇鋐科技",
+    "holding_shares": 1250000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "2327",
+    "component_name": "國巨股份",
+    "holding_shares": 7500000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "8046",
+    "component_name": "南亞電路",
+    "holding_shares": 3250000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "2454",
+    "component_name": "聯發科技",
+    "holding_shares": 900000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "3189",
+    "component_name": "景碩科技",
+    "holding_shares": 4100000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "2345",
+    "component_name": "智邦科技",
+    "holding_shares": 1600000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "3081",
+    "component_name": "聯亞光電",
+    "holding_shares": 900000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "6274",
+    "component_name": "台燿科技",
+    "holding_shares": 2000000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "5274",
+    "component_name": "信驊科技",
+    "holding_shares": 120500
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "6223",
+    "component_name": "旺矽科技",
+    "holding_shares": 380000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "3653",
+    "component_name": "健策精密",
+    "holding_shares": 340000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "3026",
+    "component_name": "禾伸堂企",
+    "holding_shares": 2700000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "8299",
+    "component_name": "群聯電子",
+    "holding_shares": 880000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "7769",
+    "component_name": "鴻勁精密",
+    "holding_shares": 300000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "3008",
+    "component_name": "大立光電",
+    "holding_shares": 1000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "3711",
+    "component_name": "日月光投",
+    "holding_shares": 9000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "2382",
+    "component_name": "廣達電腦",
+    "holding_shares": 9000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "2317",
+    "component_name": "鴻海精密",
+    "holding_shares": 9000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "3665",
+    "component_name": "貿聯-KY",
+    "holding_shares": 1000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "2603",
+    "component_name": "長榮海運",
+    "holding_shares": 9000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "2360",
+    "component_name": "致茂電子",
+    "holding_shares": 1000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "2308",
+    "component_name": "台達電子",
+    "holding_shares": 1000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "3231",
+    "component_name": "緯創資通",
+    "holding_shares": 9000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "5347",
+    "component_name": "世界先進",
+    "holding_shares": 9000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "2881",
+    "component_name": "富邦金融",
+    "holding_shares": 9000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "2303",
+    "component_name": "聯華電子",
+    "holding_shares": 9000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "2357",
+    "component_name": "華碩電腦",
+    "holding_shares": 1000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "2882",
+    "component_name": "國泰金融",
+    "holding_shares": 9000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "2379",
+    "component_name": "瑞昱半導",
+    "holding_shares": 1000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "2885",
+    "component_name": "元大金融",
+    "holding_shares": 9360
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "2891",
+    "component_name": "中國信託",
+    "holding_shares": 9000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "3044",
+    "component_name": "健鼎科技",
+    "holding_shares": 1000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "2886",
+    "component_name": "兆豐金融",
+    "holding_shares": 9000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "2887",
+    "component_name": "台新新光",
+    "holding_shares": 9000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "2890",
+    "component_name": "永豐金融",
+    "holding_shares": 9000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "2880",
+    "component_name": "華南金融",
+    "holding_shares": 9090
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "2449",
+    "component_name": "京元電子",
+    "holding_shares": 1450
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "2884",
+    "component_name": "玉山金融",
+    "holding_shares": 9000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "2883",
+    "component_name": "凱基金融",
+    "holding_shares": 9000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "2313",
+    "component_name": "華通電腦",
+    "holding_shares": 1253
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "2912",
+    "component_name": "統一超商",
+    "holding_shares": 1000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "3036",
+    "component_name": "文曄科技",
+    "holding_shares": 1000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "2412",
+    "component_name": "中華電信",
+    "holding_shares": 1000
+  },
+  {
+    "snapshot_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "1216",
+    "component_name": "統一企業",
+    "holding_shares": 1000
+  }
+]

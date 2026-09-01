@@ -184,9 +184,29 @@
       {
         "stock_id": "7769",
         "stock_name": "鴻勁"
+      },
+      {
+        "stock_id": "2337",
+        "stock_name": "旺宏"
+      },
+      {
+        "stock_id": "2360",
+        "stock_name": "致茂"
+      },
+      {
+        "stock_id": "2404",
+        "stock_name": "漢唐"
+      },
+      {
+        "stock_id": "2408",
+        "stock_name": "南亞科"
+      },
+      {
+        "stock_id": "6285",
+        "stock_name": "啟碁"
       }
     ],
-    "updated_at": "2026-08-31T19:10:11.633284+00:00"
+    "updated_at": "2026-09-01T16:41:37.837925+00:00"
   },
   "半導體業": {
     "members": [
@@ -225,9 +245,21 @@
       {
         "stock_id": "6488",
         "stock_name": "環球晶"
+      },
+      {
+        "stock_id": "3680",
+        "stock_name": "家登"
+      },
+      {
+        "stock_id": "6510",
+        "stock_name": "精測"
+      },
+      {
+        "stock_id": "8299",
+        "stock_name": "群聯"
       }
     ],
-    "updated_at": "2026-08-28T16:19:13.485258+00:00"
+    "updated_at": "2026-09-01T16:41:38.584232+00:00"
   },
   "生技醫療業": {
     "members": [
@@ -331,9 +363,13 @@
       {
         "stock_id": "2357",
         "stock_name": "華碩"
+      },
+      {
+        "stock_id": "2395",
+        "stock_name": "研華"
       }
     ],
-    "updated_at": "2026-08-31T19:10:09.712230+00:00"
+    "updated_at": "2026-09-01T16:41:36.349728+00:00"
   },
   "金融保險": {
     "members": [

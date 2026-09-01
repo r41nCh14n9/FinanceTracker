@@ -1,0 +1,322 @@
+[
+  {
+    "event_date": "2026-09-01",
+    "etf_id": "0050",
+    "component_stock_id": "6669",
+    "component_name": "緯穎",
+    "event_type": "REBALANCE",
+    "prev_shares": 54,
+    "curr_shares": 162,
+    "change_pct": 200.0
+  },
+  {
+    "event_date": "2026-09-01",
+    "etf_id": "00981A",
+    "component_stock_id": "4979",
+    "component_name": "華星光",
+    "event_type": "REBALANCE",
+    "prev_shares": 3173000,
+    "curr_shares": 2838000,
+    "change_pct": -10.557831705011031
+  },
+  {
+    "event_date": "2026-09-01",
+    "etf_id": "00981A",
+    "component_stock_id": "4958",
+    "component_name": "臻鼎-KY",
+    "event_type": "REBALANCE",
+    "prev_shares": 1644000,
+    "curr_shares": 2157000,
+    "change_pct": 31.204379562043794
+  },
+  {
+    "event_date": "2026-09-01",
+    "etf_id": "00981A",
+    "component_stock_id": "6515",
+    "component_name": "穎崴",
+    "event_type": "REBALANCE",
+    "prev_shares": 1000,
+    "curr_shares": 54000,
+    "change_pct": 5300.0
+  },
+  {
+    "event_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "2404",
+    "component_name": "漢唐集成",
+    "event_type": "DELETION",
+    "prev_shares": 1000,
+    "curr_shares": 0,
+    "change_pct": null
+  },
+  {
+    "event_date": "2026-09-01",
+    "etf_id": "00991A",
+    "component_stock_id": "2303",
+    "component_name": "聯華電子",
+    "event_type": "ADDITION",
+    "prev_shares": 0,
+    "curr_shares": 9000,
+    "change_pct": null
+  },
+  {
+    "event_date": "2026-09-01",
+    "etf_id": "00992A",
+    "component_stock_id": "8046",
+    "component_name": "南電",
+    "event_type": "REBALANCE",
+    "prev_shares": 300000,
+    "curr_shares": 639000,
+    "change_pct": 112.99999999999999
+  },
+  {
+    "event_date": "2026-09-01",
+    "etf_id": "00992A",
+    "component_stock_id": "2330",
+    "component_name": "台積電",
+    "event_type": "REBALANCE",
+    "prev_shares": 1306000,
+    "curr_shares": 1116000,
+    "change_pct": -14.548238897396631
+  },
+  {
+    "event_date": "2026-09-01",
+    "etf_id": "00992A",
+    "component_stock_id": "2454",
+    "component_name": "聯發科",
+    "event_type": "REBALANCE",
+    "prev_shares": 266000,
+    "curr_shares": 145000,
+    "change_pct": -45.48872180451128
+  },
+  {
+    "event_date": "2026-09-01",
+    "etf_id": "00992A",
+    "component_stock_id": "3711",
+    "component_name": "日月光投控",
+    "event_type": "DELETION",
+    "prev_shares": 716000,
+    "curr_shares": 0,
+    "change_pct": null
+  },
+  {
+    "event_date": "2026-09-01",
+    "etf_id": "00985A",
+    "component_stock_id": "8299",
+    "component_name": "群聯電子",
+    "event_type": "REBALANCE",
+    "prev_shares": 20000,
+    "curr_shares": 9000,
+    "change_pct": -55.00000000000001
+  },
+  {
+    "event_date": "2026-09-01",
+    "etf_id": "00985A",
+    "component_stock_id": "7769",
+    "component_name": "鴻勁精密",
+    "event_type": "REBALANCE",
+    "prev_shares": 31000,
+    "curr_shares": 18000,
+    "change_pct": -41.935483870967744
+  },
+  {
+    "event_date": "2026-09-01",
+    "etf_id": "00985A",
+    "component_stock_id": "1301",
+    "component_name": "台灣塑膠工業",
+    "event_type": "REBALANCE",
+    "prev_shares": 2612000,
+    "curr_shares": 1577000,
+    "change_pct": -39.62480857580398
+  },
+  {
+    "event_date": "2026-09-01",
+    "etf_id": "00985A",
+    "component_stock_id": "6488",
+    "component_name": "環球晶圓",
+    "event_type": "REBALANCE",
+    "prev_shares": 10000,
+    "curr_shares": 174000,
+    "change_pct": 1639.9999999999998
+  },
+  {
+    "event_date": "2026-09-01",
+    "etf_id": "00985A",
+    "component_stock_id": "3665",
+    "component_name": "貿聯控股（BizLink Holding In",
+    "event_type": "REBALANCE",
+    "prev_shares": 95000,
+    "curr_shares": 105000,
+    "change_pct": 10.526315789473683
+  },
+  {
+    "event_date": "2026-09-01",
+    "etf_id": "00985A",
+    "component_stock_id": "3036",
+    "component_name": "文曄科技",
+    "event_type": "REBALANCE",
+    "prev_shares": 475000,
+    "curr_shares": 27000,
+    "change_pct": -94.3157894736842
+  },
+  {
+    "event_date": "2026-09-01",
+    "etf_id": "00985A",
+    "component_stock_id": "3037",
+    "component_name": "欣興電子",
+    "event_type": "REBALANCE",
+    "prev_shares": 202000,
+    "curr_shares": 252000,
+    "change_pct": 24.752475247524753
+  },
+  {
+    "event_date": "2026-09-01",
+    "etf_id": "00985A",
+    "component_stock_id": "2360",
+    "component_name": "致茂電子",
+    "event_type": "REBALANCE",
+    "prev_shares": 5000,
+    "curr_shares": 43000,
+    "change_pct": 760.0
+  },
+  {
+    "event_date": "2026-09-01",
+    "etf_id": "00985A",
+    "component_stock_id": "2395",
+    "component_name": "研華",
+    "event_type": "REBALANCE",
+    "prev_shares": 146000,
+    "curr_shares": 313000,
+    "change_pct": 114.3835616438356
+  },
+  {
+    "event_date": "2026-09-01",
+    "etf_id": "00985A",
+    "component_stock_id": "2383",
+    "component_name": "台光電子材料",
+    "event_type": "REBALANCE",
+    "prev_shares": 47000,
+    "curr_shares": 52000,
+    "change_pct": 10.638297872340425
+  },
+  {
+    "event_date": "2026-09-01",
+    "etf_id": "00985A",
+    "component_stock_id": "2303",
+    "component_name": "聯華電子",
+    "event_type": "REBALANCE",
+    "prev_shares": 171000,
+    "curr_shares": 804000,
+    "change_pct": 370.17543859649123
+  },
+  {
+    "event_date": "2026-09-01",
+    "etf_id": "00403A",
+    "component_stock_id": "1717",
+    "component_name": "長興",
+    "event_type": "REBALANCE",
+    "prev_shares": 2800000,
+    "curr_shares": 3100000,
+    "change_pct": 10.714285714285714
+  },
+  {
+    "event_date": "2026-09-01",
+    "etf_id": "00403A",
+    "component_stock_id": "2327",
+    "component_name": "國巨*",
+    "event_type": "REBALANCE",
+    "prev_shares": 9785000,
+    "curr_shares": 8000000,
+    "change_pct": -18.242207460398568
+  },
+  {
+    "event_date": "2026-09-01",
+    "etf_id": "00403A",
+    "component_stock_id": "2337",
+    "component_name": "旺宏",
+    "event_type": "REBALANCE",
+    "prev_shares": 4500000,
+    "curr_shares": 3000000,
+    "change_pct": -33.33333333333333
+  },
+  {
+    "event_date": "2026-09-01",
+    "etf_id": "00403A",
+    "component_stock_id": "3711",
+    "component_name": "日月光投控",
+    "event_type": "REBALANCE",
+    "prev_shares": 7000000,
+    "curr_shares": 6000000,
+    "change_pct": -14.285714285714285
+  },
+  {
+    "event_date": "2026-09-01",
+    "etf_id": "00403A",
+    "component_stock_id": "2449",
+    "component_name": "京元電子",
+    "event_type": "REBALANCE",
+    "prev_shares": 500000,
+    "curr_shares": 1700000,
+    "change_pct": 240.0
+  },
+  {
+    "event_date": "2026-09-01",
+    "etf_id": "00403A",
+    "component_stock_id": "2344",
+    "component_name": "華邦電",
+    "event_type": "REBALANCE",
+    "prev_shares": 12000000,
+    "curr_shares": 7000000,
+    "change_pct": -41.66666666666667
+  },
+  {
+    "event_date": "2026-09-01",
+    "etf_id": "00403A",
+    "component_stock_id": "3450",
+    "component_name": "聯鈞",
+    "event_type": "REBALANCE",
+    "prev_shares": 400000,
+    "curr_shares": 860000,
+    "change_pct": 114.99999999999999
+  },
+  {
+    "event_date": "2026-09-01",
+    "etf_id": "00407A",
+    "component_stock_id": "6446",
+    "component_name": "藥華藥",
+    "event_type": "REBALANCE",
+    "prev_shares": 191191,
+    "curr_shares": 67000,
+    "change_pct": -64.95650945912726
+  },
+  {
+    "event_date": "2026-09-01",
+    "etf_id": "00407A",
+    "component_stock_id": "6510",
+    "component_name": "精測",
+    "event_type": "ADDITION",
+    "prev_shares": 0,
+    "curr_shares": 2000,
+    "change_pct": null
+  },
+  {
+    "event_date": "2026-09-01",
+    "etf_id": "00407A",
+    "component_stock_id": "2408",
+    "component_name": "南亞科",
+    "event_type": "REBALANCE",
+    "prev_shares": 1025000,
+    "curr_shares": 595000,
+    "change_pct": -41.951219512195124
+  },
+  {
+    "event_date": "2026-09-01",
+    "etf_id": "00407A",
+    "component_stock_id": "6515",
+    "component_name": "穎崴",
+    "event_type": "DELETION",
+    "prev_shares": 8000,
+    "curr_shares": 0,
+    "change_pct": null
+  }
+]
