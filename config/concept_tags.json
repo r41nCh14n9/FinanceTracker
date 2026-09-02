@@ -47,6 +47,22 @@
       }
     ]
   },
+  "光學": {
+    "members": [
+      {
+        "stock_id": "3008",
+        "stock_name": "大立光"
+      },
+      {
+        "stock_id": "3406",
+        "stock_name": "玉晶光"
+      },
+      {
+        "stock_id": "3019",
+        "stock_name": "亞光"
+      }
+    ]
+  },
   "光通信": {
     "members": [
       {
