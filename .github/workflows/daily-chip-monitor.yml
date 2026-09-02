@@ -2,10 +2,10 @@ name: 籌碼監控推播引擎
 
 on:
   schedule:
-    # 週一至週五 UTC 12:13 = 台灣時間 20:13
+    # 週一至週五 UTC 11:30 = 台灣時間 19:30
     # 刻意避開整點觸發：GitHub Actions 排程在整點（如 UTC 12:00）
     # 屬於高負載時段，容易塞隊delay，錯開幾分鐘可降低延遲機率
-    - cron: "13 12 * * 1-5"
+    - cron: "30 11 * * 1-5"
   workflow_dispatch:
     inputs:
       date:
