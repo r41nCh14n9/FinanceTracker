@@ -1,0 +1,31 @@
+# 本機 Docker 環境定義，兩種用途：
+#
+# 1. 一次性測試／執行（app 服務）：
+#      docker compose run --rm app --date 2026-08-31 --dry-run
+#    也可以拿同一個 image 直接跑 pytest 或任意指令，見 scripts/docker-test.sh（包成更好記的指令）。
+#
+# 2. 本機常駐排程 server（scheduler 服務）：
+#      docker compose up -d scheduler
+#    容器內以 cron 於週一至週五台灣時間 19:30 觸發每日主流程，作為 GitHub Actions 之外
+#    可獨立運作的本機／自架主機排程管道；設計細節見 docker/crontab、docker/entrypoint.sh。
+#
+# 兩個服務共用同一份 Dockerfile 建置出的 image，差別只在 entrypoint 與是否常駐（restart 設定）。
+services:
+  app:
+    build: .
+    image: financetracker:local
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    entrypoint: ["python", "main.py"]
+
+  scheduler:
+    build: .
+    image: financetracker:local
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    entrypoint: ["/app/docker/entrypoint.sh"]
+    restart: unless-stopped

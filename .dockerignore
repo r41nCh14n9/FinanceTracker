@@ -1,0 +1,19 @@
+# 本機開發產物，容器內用不到、也不該打包進映像檔
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# 版控/編輯器/文件相關，與執行期無關
+.git/
+.github/
+.claude/
+.vscode/
+.idea/
+docs/
+README.md
+
+# 密鑰與正式資料：一律於執行期以掛載/env_file 方式注入，絕不 bake 進映像層
+.env
+data/
