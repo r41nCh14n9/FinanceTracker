@@ -203,17 +203,28 @@ class ConfigLoader:
 
     # --- 門檻：個股三大法人雙門檻（成交量佔比 / 市值分級金額） ---
     def get_volume_ratio_threshold(self) -> float:
-        """回傳百分比數字（例如 15.0 代表 15%），比對時記得除以 100。"""
-        return float(self._thresholds["institutional_tiered"]["volume_ratio_pct"])
+        """回傳百分比數字（例如 15.0 代表 15%），比對時記得除以 100；套用 threshold_multiplier 倍率。"""
+        base = float(self._thresholds["institutional_tiered"]["volume_ratio_pct"])
+        return base * self._get_institutional_threshold_multiplier()
 
     def get_market_cap_tier_bounds(self) -> tuple[int, int]:
-        """回傳 (大型股市值下限, 中型股市值下限)，單位元。"""
+        """回傳 (大型股市值下限, 中型股市值下限)，單位元；這是市值分級門檻，
+        非買賣超金額門檻，不套用 threshold_multiplier。
+        """
         tiers = self._thresholds["institutional_tiered"]["market_cap_tiers"]
         return int(tiers["large_min"]), int(tiers["mid_min"])
 
     def get_tiered_amount_threshold(self, tier: MarketCapTier) -> int:
+        """依市值分級回傳買賣超估算金額門檻，套用 threshold_multiplier 倍率。"""
         key = _TIER_KEY_BY_ENUM[tier]
-        return int(self._thresholds["institutional_tiered"]["amount_thresholds"][key])
+        base = int(self._thresholds["institutional_tiered"]["amount_thresholds"][key])
+        return int(base * self._get_institutional_threshold_multiplier())
+
+    def _get_institutional_threshold_multiplier(self) -> float:
+        """個股三大法人門檻的統一調整倍率，選填欄位，未設定時預設 1.0（不影響既有行為）。
+        只要調整這一個數字就能同時放寬/收緊成交量佔比與金額兩組門檻，不需要逐一重算。
+        """
+        return float(self._thresholds["institutional_tiered"].get("threshold_multiplier", 1.0))
 
     # --- 門檻：大盤三大法人金額（外資/投信/自營商各自獨立） ---
     def get_market_institutional_threshold(self, investor_type: str) -> int:

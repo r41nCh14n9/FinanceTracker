@@ -12,9 +12,43 @@ import logging
 from datetime import datetime, timezone
 
 from src.fetcher import FinMindClient
+from src.models import MarketCapTier
 from src.storage import SnapshotRepository
 
 logger = logging.getLogger(__name__)
+
+TIER_LABELS = {
+    MarketCapTier.LARGE: "大型",
+    MarketCapTier.MID: "中型",
+    MarketCapTier.SMALL: "中小型",
+}
+
+_INDUSTRY_SUFFIX = "業"
+
+
+def display_industry(industry: str) -> str:
+    """顯示層去掉官方產業別字尾的「業」字（如「半導體業」->「半導體」），純粹是
+    為了讓標籤短一點；落地儲存的原始值不受影響。
+    """
+    return industry[: -len(_INDUSTRY_SUFFIX)] if industry.endswith(_INDUSTRY_SUFFIX) else industry
+
+
+def build_classification_tags(
+    tier_label: str | None, stock_id: str, industry_map: dict[str, str], concept_map: dict[str, list[str]]
+) -> list[str]:
+    """組出某股票要顯示的分類標籤：官方產業別（如查得到）＋市值分級（如有）＋
+    人工維護的概念標籤（可能有多個，全部一併列入）。產業別排最前面，這樣同產業的
+    股票即使沒有相鄰顯示，光看標籤第一個字也能一眼認出彼此是同一組。三者皆無時
+    回傳空陣列，呼叫端據此決定要不要把整個 [] 省略。
+    """
+    tags = []
+    industry = industry_map.get(stock_id)
+    if industry:
+        tags.append(display_industry(industry))
+    if tier_label:
+        tags.append(tier_label)
+    tags.extend(concept_map.get(stock_id, []))
+    return tags
 
 
 def invert_category_table(category_table: dict) -> dict[str, list[str]]:
@@ -26,6 +60,30 @@ def invert_category_table(category_table: dict) -> dict[str, list[str]]:
         for member in entry.get("members", []):
             reverse.setdefault(member["stock_id"], []).append(category_name)
     return reverse
+
+
+def group_by_first_concept(items: list, stock_id_of, concept_map: dict[str, list[str]]) -> list[tuple[str | None, list]]:
+    """把 items 依照每個項目對應股票的「第一個」概念分類分組（一檔股票可能同時符合多個
+    概念，這裡只取分組用，不影響呈現時仍會列出全部概念）。
+
+    回傳依序排列的 (分類名稱, 該組項目清單) 配對；組的順序＝items 中各分類第一次出現的
+    順序，組內維持原始相對順序。查無概念的項目一律歸進分類名稱為 None 的那組，且該組
+    固定排在最後，不管它在原始清單中第一次出現的位置在哪裡。
+    """
+    order: list[str | None] = []
+    buckets: dict[str | None, list] = {}
+    for item in items:
+        concepts = concept_map.get(stock_id_of(item))
+        key = concepts[0] if concepts else None
+        if key not in buckets:
+            buckets[key] = []
+            order.append(key)
+        buckets[key].append(item)
+
+    if None in order:
+        order.remove(None)
+        order.append(None)
+    return [(key, buckets[key]) for key in order]
 
 
 class ClassificationService:

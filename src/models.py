@@ -32,6 +32,22 @@ class DataSourceKey(str, Enum):
     FINMIND_MARKET = "FINMIND_MARKET"
     FINMIND_BROKER = "FINMIND_BROKER"
     ISSUER_PCF = "ISSUER_PCF"
+    TWSE_MARKET_QUOTE = "TWSE_MARKET_QUOTE"
+    TPEX_MARKET_QUOTE = "TPEX_MARKET_QUOTE"
+
+
+class MarketType(str, Enum):
+    """股票掛牌市場別，供漲跌停掃描標示標的來源。"""
+
+    TWSE = "TWSE"  # 上市
+    TPEX = "TPEX"  # 上櫃
+
+
+class LimitType(str, Enum):
+    """當日觸及漲停或跌停。"""
+
+    UP = "UP"
+    DOWN = "DOWN"
 
 
 class AlertScope(str, Enum):
@@ -172,6 +188,22 @@ class PurgeResult:
     deleted: list[str]
     skipped_invalid_format: list[str]
     failed: list[tuple[str, str]]
+
+
+@dataclass
+class LimitUpDownRecord:
+    """當日觸及漲跌停的股票，prev_close_price 是由 close_price - change 反推得出，
+    非另外查詢所得。
+    """
+
+    trade_date: str
+    stock_id: str
+    stock_name: str
+    market: MarketType
+    limit_type: LimitType
+    close_price: float
+    prev_close_price: float
+    change_pct: float
 
 
 @dataclass

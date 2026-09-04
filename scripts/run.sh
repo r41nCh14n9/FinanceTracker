@@ -3,16 +3,20 @@
 # 用法：scripts/run.sh [模式] [main.py 參數 / pytest 參數...]
 #   scripts/run.sh                                  # 預設模式 test：跑 pytest 單元測試
 #   scripts/run.sh test -k analyzer                 # 只跑符合關鍵字的測試
-#   scripts/run.sh 0 --date 2026-07-28               # 完整流程：真的抓外部資料 + 真的推播 LINE
+#   scripts/run.sh 0 --date 2026-07-28               # 完整流程：真的抓外部資料 + 真的推播 LINE（單次跑完，不分兩階段）
 #   scripts/run.sh full --date 2026-07-28            # 同上（0 的別名）
 #   scripts/run.sh 1 --date 2026-07-28               # 真的抓外部資料，但不推播 LINE
 #   scripts/run.sh fetch-only --date 2026-07-28      # 同上（1 的別名）
 #   scripts/run.sh 2                                 # 準備並檢查 .env，缺什麼變數就報錯退出
 #   scripts/run.sh check                             # 同上（2 的別名）
+#   scripts/run.sh skip-notify --date 2026-07-28     # 兩階段流程的第一段：抓取/分析/產出完整版報告，不推播
+#   scripts/run.sh notify-only --date 2026-07-28     # 兩階段流程的第二段：讀回既有分析結果格式化並推播；
+#                                                       可加 --report-url 測試短網址附加效果
 #   scripts/run.sh purge                             # 只清除超過保留天數的舊快照/報告目錄，不跑抓取/分析/推播
 #   scripts/run.sh purge --dry-run                   # 同上，但只印出會清除哪些目錄，不實際刪除
 #
-# 模式 0 / 1 都會真的呼叫 FinMind / 證交所 API，執行前會先做模式 2 的檢查。
+# 模式 0 / 1 / skip-notify / notify-only 都會真的呼叫 FinMind / 證交所 / TWSE / TPEx / 短網址服務等
+# 外部 API，執行前會先做模式 2 的檢查。
 set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -98,8 +102,18 @@ case "$mode" in
         echo "[run.sh] 清除超過保留天數的舊快照/報告目錄..."
         python main.py --purge "$@"
         ;;
+    skip-notify)
+        check_env_vars
+        echo "[run.sh] 兩階段流程第一段：抓取/分析/產出完整版報告，不推播（main.py --skip-notify）..."
+        python main.py --skip-notify "$@"
+        ;;
+    notify-only)
+        check_env_vars
+        echo "[run.sh] 兩階段流程第二段：讀回既有分析結果格式化並推播（main.py --notify-only）..."
+        python main.py --notify-only "$@"
+        ;;
     *)
-        echo "[run.sh] 未知模式：$mode（可用：test / 0|full / 1|fetch-only / 2|check / purge）" >&2
+        echo "[run.sh] 未知模式：$mode（可用：test / 0|full / 1|fetch-only / 2|check / skip-notify / notify-only / purge）" >&2
         exit 1
         ;;
 esac

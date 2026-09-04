@@ -84,6 +84,32 @@ def test_exposes_institutional_tiered_and_market_thresholds(tmp_path):
     assert config.get_market_institutional_threshold("dealer") == 5_000_000_000
 
 
+def test_institutional_threshold_multiplier_defaults_to_one_when_not_configured(tmp_path):
+    """thresholds.json 沒特別設定這個欄位（既有設定檔就是這樣）時，門檻要維持原始值，不能噴例外。"""
+    config_dir = _make_valid_config_dir(tmp_path)
+    config = ConfigLoader(config_dir=config_dir)
+
+    assert config.get_volume_ratio_threshold() == 15.0
+    assert config.get_tiered_amount_threshold(MarketCapTier.LARGE) == 3_000_000_000
+
+
+def test_institutional_threshold_multiplier_scales_volume_and_amount_thresholds(tmp_path):
+    """設定倍率後，成交量佔比與金額門檻都要一起放大，但市值分級門檻本身（large_min/mid_min）
+    不受影響——那是用來判斷一檔股票屬於哪個市值級距，不是買賣超金額門檻。
+    """
+    config_dir = _make_valid_config_dir(tmp_path)
+    thresholds = json.loads((config_dir / "thresholds.json").read_text(encoding="utf-8"))
+    thresholds["institutional_tiered"]["threshold_multiplier"] = 1.5
+    _write(config_dir / "thresholds.json", thresholds)
+    config = ConfigLoader(config_dir=config_dir)
+
+    assert config.get_volume_ratio_threshold() == 22.5
+    assert config.get_tiered_amount_threshold(MarketCapTier.LARGE) == 4_500_000_000
+    assert config.get_tiered_amount_threshold(MarketCapTier.MID) == 750_000_000
+    assert config.get_tiered_amount_threshold(MarketCapTier.SMALL) == 150_000_000
+    assert config.get_market_cap_tier_bounds() == (100_000_000_000, 10_000_000_000)
+
+
 def test_etf_holding_count_drop_pct_threshold_defaults_when_not_configured(tmp_path):
     """thresholds.json 沒特別設定這個欄位（既有設定檔就是這樣）時，要有一個合理預設值，不是噴例外。"""
     config_dir = _make_valid_config_dir(tmp_path)

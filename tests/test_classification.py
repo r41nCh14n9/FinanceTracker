@@ -1,6 +1,12 @@
 from unittest.mock import MagicMock
 
-from src.classification import ClassificationService, invert_category_table
+from src.classification import (
+    ClassificationService,
+    build_classification_tags,
+    display_industry,
+    group_by_first_concept,
+    invert_category_table,
+)
 from src.fetcher import FinMindClient
 from src.storage import SnapshotRepository
 
@@ -30,6 +36,62 @@ def test_invert_category_table_collects_multiple_categories_for_same_stock():
 
 def test_invert_category_table_handles_empty_table():
     assert invert_category_table({}) == {}
+
+
+def test_group_by_first_concept_groups_in_first_seen_order():
+    items = ["2330", "3661", "2603"]
+    concept_map = {"2330": ["半導體"], "3661": ["半導體"], "2603": ["航運"]}
+
+    grouped = group_by_first_concept(items, lambda s: s, concept_map)
+
+    assert grouped == [("半導體", ["2330", "3661"]), ("航運", ["2603"])]
+
+
+def test_group_by_first_concept_uses_only_first_concept_when_multiple_match():
+    """一檔股票同時符合多個概念（如「電源」與「被動」）時，分組只取第一個，
+    避免同一檔股票在報告中重複出現好幾次；呈現時要不要列出全部概念是呼叫端的事，
+    這裡只負責分組。
+    """
+    concept_map = {"2308": ["電源", "被動"]}
+
+    grouped = group_by_first_concept(["2308"], lambda s: s, concept_map)
+
+    assert grouped == [("電源", ["2308"])]
+
+
+def test_group_by_first_concept_puts_unclassified_bucket_last():
+    """查無概念的項目一律歸進 None 那組，且固定排在最後，即使它在原始清單中最早出現。"""
+    items = ["9999", "2330"]
+    concept_map = {"2330": ["半導體"]}
+
+    grouped = group_by_first_concept(items, lambda s: s, concept_map)
+
+    assert grouped == [("半導體", ["2330"]), (None, ["9999"])]
+
+
+def test_group_by_first_concept_handles_empty_items():
+    assert group_by_first_concept([], lambda s: s, {}) == []
+
+
+def test_display_industry_strips_trailing_industry_suffix():
+    assert display_industry("半導體業") == "半導體"
+
+
+def test_display_industry_leaves_names_without_suffix_unchanged():
+    assert display_industry("電腦及週邊設備") == "電腦及週邊設備"
+
+
+def test_build_classification_tags_orders_industry_tier_then_concepts():
+    industry_map = {"2330": "半導體業"}
+    concept_map = {"2330": ["IC 製造", "先進封裝"]}
+
+    tags = build_classification_tags("大型", "2330", industry_map, concept_map)
+
+    assert tags == ["半導體", "大型", "IC 製造", "先進封裝"]
+
+
+def test_build_classification_tags_returns_empty_list_when_nothing_available():
+    assert build_classification_tags(None, "9999", {}, {}) == []
 
 
 def _make_repo(tmp_path):

@@ -1,7 +1,6 @@
 # scheduler 容器內的 cron 排程表（由 docker/entrypoint.sh 於容器啟動時載入）。
 #
-# 時間直接寫台灣本地時間（容器 TZ 已於 Dockerfile 設為 Asia/Taipei），
-# 對應 .github/workflows/daily-chip-monitor.yml 的 `0 12 * * 1-5`（UTC）＝台灣時間 20:00。
+# 時間直接寫台灣本地時間（容器 TZ 已於 Dockerfile 設為 Asia/Taipei）。
 #
 # 注意：crontab 語法中 % 有特殊意義（代表換行），指令內要用到的 % 一律要跳脫成 \%。
 #
@@ -9,18 +8,19 @@
 # 把 docker/entrypoint.sh 寫入的密鑰環境變數（FINMIND_TOKEN 等）讀回來，
 # 執行結果（含錯誤訊息）全部導向 /app/data/scheduler.log，供 entrypoint.sh 用 `tail -F` 即時輸出。
 #
-# 目前呼叫 main.py 的方式對應現行（尚未拆分 --skip-notify / --notify-only 兩階段前）的單次完整流程；
-# 待 SD-每日完整籌碼報告與漲跌停監控-系統設計書.md 第四章所述的兩階段旗標實作完成後，
-# 這裡需要改成「main.py --skip-notify → git commit（若本機排程也要回寫版控，需額外設定 git 憑證，
-# 屬有意的範疇之外，見本檔案最下方說明）→ main.py --notify-only」三段式，本檔案屆時需同步更新。
-0 20 * * 1-5 . /etc/environment; cd /app && python main.py --date "$(date +\%Y-\%m-\%d)" >> /app/data/scheduler.log 2>&1
+# 三段式流程，對應 main.py 的 --skip-notify / --purge / --notify-only 三個獨立旗標：
+# 抓取/分析/產出報告 → 清除過期快照/報告 → 推播。本機排程刻意不在容器內執行
+# git commit/push（見本檔案最下方說明），所以這裡的推播不會附上完整版報告連結，
+# 純粹是本機排程情境下的已知限制，非程式邏輯缺陷。
+0 20 * * 1-5 . /etc/environment; cd /app && python main.py --date "$(date +\%Y-\%m-\%d)" --skip-notify >> /app/data/scheduler.log 2>&1
 
-# 沿用既有保留清除邏輯：同一時間點之後緊接著清一次過期快照/報告（不影響上面那行的執行結果）。
-0 20 * * 1-5 . /etc/environment; cd /app && python main.py --purge >> /app/data/scheduler.log 2>&1
+1 20 * * 1-5 . /etc/environment; cd /app && python main.py --purge >> /app/data/scheduler.log 2>&1
+
+2 20 * * 1-5 . /etc/environment; cd /app && python main.py --date "$(date +\%Y-\%m-\%d)" --notify-only >> /app/data/scheduler.log 2>&1
 
 # ---
 # 關於「回寫版控」：本 scheduler 容器刻意不在容器內執行 git commit/push——
 # 容器內沒有配置 git 使用者身分與推送憑證（SSH key／PAT），把它們放進容器會增加額外的密鑰管理面，
 # 與本檔案「先求本機/自架主機能獨立跑起來」的最小可行範疇不符。
-# 若之後要讓本機排程也自動回寫 GitHub，建議另外掛載一組唯讀範圍受限的部署金鑰，
-# 屬於後續可選的擴充項目，非本次腳本的必要功能。
+# 若之後要讓本機排程也自動回寫 GitHub 並附上報告連結，建議另外掛載一組唯讀範圍受限的部署金鑰，
+# 並在上面第三段指令補上 --report-url，屬於後續可選的擴充項目，非本次腳本的必要功能。
