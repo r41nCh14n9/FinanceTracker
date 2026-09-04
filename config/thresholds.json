@@ -16,7 +16,8 @@
       "large": 3000000000,
       "mid": 500000000,
       "small": 100000000
-    }
+    },
+    "threshold_multiplier": 1.5
   },
   "market_institutional": {
     "foreign_amount": 20000000000,

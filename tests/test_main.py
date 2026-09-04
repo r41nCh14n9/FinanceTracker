@@ -2,7 +2,18 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from main import _classify_rebalance_events, _parse_target_date, _resolve_classification_tags, main, run, run_purge
+from main import (
+    _classify_rebalance_events,
+    _fetch_limit_institutional_trades,
+    _parse_target_date,
+    _resolve_classification_tags,
+    _scan_limit_up_down,
+    _write_daily_report,
+    main,
+    run,
+    run_notify_only,
+    run_purge,
+)
 from src.fetcher import Fetcher, FinMindClient
 from src.issuer_pcf.base import IssuerPcfProvider
 from src.models import (
@@ -11,6 +22,10 @@ from src.models import (
     DailySnapshotMeta,
     EtfHoldingRecord,
     InstitutionalAlert,
+    InstitutionalTradeRecord,
+    LimitType,
+    LimitUpDownRecord,
+    MarketType,
     PurgeResult,
     RebalanceEvent,
     RebalanceEventType,
@@ -224,12 +239,31 @@ def test_main_normalizes_date_before_calling_run():
         exit_code = main(["--date", "20260824", "--dry-run"])
 
     assert exit_code == 0
-    mock_run.assert_called_once_with("2026-08-24", dry_run=True)
+    mock_run.assert_called_once_with("2026-08-24", dry_run=True, skip_notify=False)
+
+
+def test_main_routes_to_run_notify_only_when_flag_set():
+    with patch("main.run_notify_only", return_value=True) as mock_run_notify_only, patch("main.run") as mock_run:
+        exit_code = main(["--date", "20260824", "--notify-only", "--report-url", "https://example.com/report.md"])
+
+    assert exit_code == 0
+    mock_run_notify_only.assert_called_once_with("2026-08-24", "https://example.com/report.md", dry_run=False)
+    mock_run.assert_not_called()
+
+
+def test_main_passes_skip_notify_flag_through_to_run():
+    with patch("main.run", return_value=True) as mock_run:
+        exit_code = main(["--date", "20260824", "--skip-notify"])
+
+    assert exit_code == 0
+    mock_run.assert_called_once_with("2026-08-24", dry_run=False, skip_notify=True)
 
 
 def _patch_run_dependencies():
-    """run() 內部會先建立 ConfigLoader/SnapshotRepository/Fetcher，這裡把三者換成假物件，
-    讓測試只關心「交易日曆事前檢查」這一段新增的短路邏輯，不用管抓取/分析內部細節。
+    """run() 內部會先建立 ConfigLoader/SnapshotRepository/Fetcher，並額外呼叫漲跌停掃描／
+    報告產出／FinMind 補查這些會打外部 API 的步驟，這裡全部換成假物件，讓測試只關心
+    「交易日曆事前檢查」這一段短路邏輯，不用管抓取/分析/報告產出的內部細節，也不會在
+    跑測試時真的打到外部服務。
     """
     return (
         patch("main.ConfigLoader"),
@@ -237,6 +271,9 @@ def _patch_run_dependencies():
         patch("main.Fetcher"),
         patch("main._evaluate_institutional_alerts", return_value=([], [], [])),
         patch("main._classify_rebalance_events", return_value=[]),
+        patch("main._scan_limit_up_down", return_value=[]),
+        patch("main._fetch_limit_institutional_trades", return_value={}),
+        patch("main._write_daily_report"),
     )
 
 
@@ -292,6 +329,9 @@ def test_run_still_previews_normally_in_dry_run_mode_on_trading_day():
         patchers[2] as mock_fetcher_cls,
         patchers[3],
         patchers[4],
+        patchers[5],
+        patchers[6],
+        patchers[7],
     ):
         mock_config_cls.return_value.get_concept_tags.return_value = {}
         mock_storage_cls.return_value.read_industry_tags.return_value = {}
@@ -375,5 +415,168 @@ def test_run_purge_returns_false_on_config_error():
 
     with patch("main.ConfigLoader", side_effect=ConfigError("設定檔不存在")):
         result = run_purge(dry_run=False)
+
+    assert result is False
+
+
+def test_scan_limit_up_down_writes_records_and_returns_them(tmp_path):
+    storage = _make_repo(tmp_path)
+    record = LimitUpDownRecord("2026-08-24", "1101", "台泥", MarketType.TWSE, LimitType.UP, 110.0, 100.0, 10.0)
+    with patch("main.LimitScanner") as mock_scanner_cls:
+        mock_scanner_cls.return_value.scan.return_value = [record]
+
+        records = _scan_limit_up_down(storage, "2026-08-24")
+
+    assert records == [record]
+    assert storage.read_limit_up_down("2026-08-24")[0]["stock_id"] == "1101"
+
+
+def test_fetch_limit_institutional_trades_reuses_watchlist_data_without_calling_finmind(tmp_path):
+    """漲跌停股如果本來就在 watchlist 裡、今天已經抓過三大法人資料，不該重打一次 API。"""
+    storage = _make_repo(tmp_path)
+    storage.write_institutional_trades("2026-08-24", [
+        InstitutionalTradeRecord("2026-08-24", "1101", "台泥", 0, 0, 0, 0, 0, 0, 0, 999)
+    ])
+    config = _FakeConfig()
+    records = [LimitUpDownRecord("2026-08-24", "1101", "台泥", MarketType.TWSE, LimitType.UP, 110.0, 100.0, 10.0)]
+
+    with patch("main.FinMindClient") as mock_finmind_cls:
+        trades = _fetch_limit_institutional_trades(config, storage, "2026-08-24", records)
+
+    assert trades["1101"]["total_net"] == 999
+    mock_finmind_cls.assert_not_called()
+
+
+def test_fetch_limit_institutional_trades_queries_finmind_for_stocks_outside_watchlist(tmp_path):
+    storage = _make_repo(tmp_path)
+    config = _FakeConfig()
+    records = [LimitUpDownRecord("2026-08-24", "6789", "上櫃甲", MarketType.TPEX, LimitType.UP, 55.0, 50.0, 10.0)]
+    finmind = MagicMock(spec=FinMindClient)
+    finmind.fetch_institutional_trades.return_value = [{"stock_id": "6789", "total_net": 100}]
+
+    with patch("main.FinMindClient", return_value=finmind):
+        trades = _fetch_limit_institutional_trades(config, storage, "2026-08-24", records)
+
+    assert trades["6789"]["total_net"] == 100
+    finmind.fetch_institutional_trades.assert_called_once_with("2026-08-24", ["6789"])
+
+
+def test_fetch_limit_institutional_trades_returns_empty_when_finmind_query_fails(tmp_path):
+    """補查失敗不能讓整個報告產出流程炸掉，該股票在報告中顯示查無資料即可。"""
+    storage = _make_repo(tmp_path)
+    config = _FakeConfig()
+    records = [LimitUpDownRecord("2026-08-24", "6789", "上櫃甲", MarketType.TPEX, LimitType.UP, 55.0, 50.0, 10.0)]
+    finmind = MagicMock(spec=FinMindClient)
+    finmind.fetch_institutional_trades.side_effect = RuntimeError("boom")
+
+    with patch("main.FinMindClient", return_value=finmind):
+        trades = _fetch_limit_institutional_trades(config, storage, "2026-08-24", records)
+
+    assert trades == {}
+
+
+def test_write_daily_report_writes_generated_markdown_to_storage(tmp_path):
+    storage = _make_repo(tmp_path)
+    with patch("main.ReportGenerator") as mock_generator_cls:
+        mock_generator_cls.return_value.generate.return_value = "# 報告內容"
+
+        _write_daily_report(storage, "2026-08-24", [], [], [], {}, [], {}, {})
+
+    path = tmp_path / "data" / "reports" / "2026-08-24" / "daily_report.md"
+    assert path.read_text(encoding="utf-8") == "# 報告內容"
+
+
+def test_write_daily_report_does_not_raise_when_generation_fails(tmp_path):
+    """報告產出失敗不能擋住後續推播；本測試只驗證呼叫端不會被拋出的例外中斷。"""
+    storage = _make_repo(tmp_path)
+    with patch("main.ReportGenerator") as mock_generator_cls:
+        mock_generator_cls.return_value.generate.side_effect = RuntimeError("boom")
+
+        _write_daily_report(storage, "2026-08-24", [], [], [], {}, [], {}, {})  # 不應拋出例外
+
+
+def test_run_notify_only_returns_false_when_no_prior_analysis_exists(tmp_path):
+    """--skip-notify 都沒跑過就直接 --notify-only，兩份分析結果都會是空的，
+    不該假裝成功推播一份空白訊息出去。
+    """
+    with patch("main.ConfigLoader"), patch("main.SnapshotRepository") as mock_storage_cls:
+        mock_storage = mock_storage_cls.return_value
+        mock_storage.read_institutional_trades.return_value = []
+        mock_storage.read_institutional_alerts.return_value = []
+
+        result = run_notify_only("2026-08-24", None, dry_run=False)
+
+    assert result is False
+
+
+def test_run_notify_only_splits_alerts_by_scope_and_notifies_without_link(tmp_path):
+    market_alert = InstitutionalAlert(scope=AlertScope.MARKET, trigger_type=AlertTriggerType.MARKET_FOREIGN, estimated_amount=1)
+    stock_alert = InstitutionalAlert(scope=AlertScope.STOCK, trigger_type=AlertTriggerType.VOLUME_RATIO, stock_id="2330")
+
+    with (
+        patch("main.ConfigLoader"),
+        patch("main.SnapshotRepository") as mock_storage_cls,
+        patch("main._resolve_classification_tags", return_value=({}, {})),
+        patch("main.Notifier") as mock_notifier_cls,
+    ):
+        mock_storage = mock_storage_cls.return_value
+        mock_storage.read_institutional_trades.return_value = [{"stock_id": "2330"}]
+        mock_storage.read_institutional_alerts.return_value = [market_alert, stock_alert]
+        mock_storage.read_rebalance_events.return_value = []
+        mock_notifier_cls.return_value.notify.return_value = True
+
+        result = run_notify_only("2026-08-24", None, dry_run=False)
+
+    assert result is True
+    call_args = mock_notifier_cls.return_value.notify.call_args
+    assert call_args.args[1] == [market_alert]
+    assert call_args.args[2] == [stock_alert]
+    assert call_args.args[-1] is None  # 沒帶 --report-url 時 report_link 為 None
+
+
+def test_run_notify_only_shortens_report_url_before_notifying(tmp_path):
+    with (
+        patch("main.ConfigLoader"),
+        patch("main.SnapshotRepository") as mock_storage_cls,
+        patch("main._resolve_classification_tags", return_value=({}, {})),
+        patch("main.LinkPublisher") as mock_publisher_cls,
+        patch("main.Notifier") as mock_notifier_cls,
+    ):
+        mock_storage = mock_storage_cls.return_value
+        mock_storage.read_institutional_trades.return_value = [{"stock_id": "2330"}]
+        mock_storage.read_institutional_alerts.return_value = []
+        mock_storage.read_rebalance_events.return_value = []
+        mock_publisher_cls.return_value.shorten.return_value = "https://tinyurl.com/abc"
+        mock_notifier_cls.return_value.notify.return_value = True
+
+        run_notify_only("2026-08-24", "https://github.com/example/daily_report.md", dry_run=False)
+
+    mock_publisher_cls.return_value.shorten.assert_called_once_with("https://github.com/example/daily_report.md")
+    assert mock_notifier_cls.return_value.notify.call_args.args[-1] == "https://tinyurl.com/abc"
+
+
+def test_run_notify_only_dry_run_prints_without_calling_notifier(tmp_path):
+    with (
+        patch("main.ConfigLoader"),
+        patch("main.SnapshotRepository") as mock_storage_cls,
+        patch("main._resolve_classification_tags", return_value=({}, {})),
+        patch("main.Notifier") as mock_notifier_cls,
+    ):
+        mock_storage = mock_storage_cls.return_value
+        mock_storage.read_institutional_trades.return_value = [{"stock_id": "2330"}]
+        mock_storage.read_institutional_alerts.return_value = []
+        mock_storage.read_rebalance_events.return_value = []
+
+        result = run_notify_only("2026-08-24", None, dry_run=True)
+
+    assert result is True
+    mock_notifier_cls.return_value.notify.assert_not_called()
+
+
+def test_run_notify_only_returns_false_on_config_error():
+    from src.config import ConfigError
+
+    with patch("main.ConfigLoader", side_effect=ConfigError("設定檔不存在")):
+        result = run_notify_only("2026-08-24", None, dry_run=False)
 
     assert result is False

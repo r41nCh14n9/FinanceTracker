@@ -24,15 +24,20 @@ from pathlib import Path
 from typing import Any
 
 from src.models import (
+    AlertScope,
+    AlertTriggerType,
     BrokerTradeRecord,
     DailySnapshotMeta,
     EtfHoldingRecord,
     InstitutionalAlert,
     InstitutionalTradeRecord,
+    LimitUpDownRecord,
+    MarketCapTier,
     MarketInstitutionalRecord,
     NotificationLogEntry,
     PurgeResult,
     RebalanceEvent,
+    RebalanceEventType,
     SourceStatus,
     StockCapitalSnapshot,
     StockDailyTrading,
@@ -157,6 +162,14 @@ class SnapshotRepository:
     def read_market_institutional(self, snapshot_date: str) -> dict | None:
         return self._read_json(self._snapshot_dir(snapshot_date) / "market_institutional.json")
 
+    # --- LIMIT_UP_DOWN_RECORD（當日觸及漲跌停股票清單，上市＋上櫃合併） ---
+    def write_limit_up_down(self, snapshot_date: str, records: list[LimitUpDownRecord]) -> None:
+        payload = [dataclasses.asdict(r) for r in records]
+        self._write_json(self._snapshot_dir(snapshot_date) / "limit_up_down.json", payload)
+
+    def read_limit_up_down(self, snapshot_date: str) -> list[dict]:
+        return self._read_json(self._snapshot_dir(snapshot_date) / "limit_up_down.json") or []
+
     # --- ETF_HOLDING_RECORD（每檔 ETF 各自一個檔案，比對時只需載入單一 ETF） ---
     def write_etf_holdings(self, snapshot_date: str, etf_id: str, records: list[EtfHoldingRecord]) -> None:
         payload = [dataclasses.asdict(r) for r in records]
@@ -172,10 +185,56 @@ class SnapshotRepository:
         payload = [dataclasses.asdict(e) for e in events]
         self._write_json(self._report_dir(report_date) / "rebalance_events.json", payload)
 
+    def read_rebalance_events(self, report_date: str) -> list[RebalanceEvent]:
+        """讀回既有的換倉分析結果，還原成 RebalanceEvent（含 event_type 列舉），供推播
+        階段跟分析階段脫鉤後（--notify-only）重新格式化訊息用，不用重跑一次分析。
+        """
+        payload = self._read_json(self._report_dir(report_date) / "rebalance_events.json") or []
+        return [self._rebalance_event_from_dict(row) for row in payload]
+
+    @staticmethod
+    def _rebalance_event_from_dict(row: dict) -> RebalanceEvent:
+        return RebalanceEvent(
+            event_date=row["event_date"],
+            etf_id=row["etf_id"],
+            component_stock_id=row["component_stock_id"],
+            component_name=row["component_name"],
+            event_type=RebalanceEventType(row["event_type"]),
+            prev_shares=row["prev_shares"],
+            curr_shares=row["curr_shares"],
+            change_pct=row["change_pct"],
+        )
+
     # --- INSTITUTIONAL_ALERT（門檻判斷結果，只存達標項目） ---
     def write_institutional_alerts(self, report_date: str, alerts: list[InstitutionalAlert]) -> None:
         payload = [dataclasses.asdict(a) for a in alerts]
         self._write_json(self._report_dir(report_date) / "institutional_alerts.json", payload)
+
+    def read_institutional_alerts(self, report_date: str) -> list[InstitutionalAlert]:
+        """讀回既有的門檻判斷結果，還原成 InstitutionalAlert（含 scope／trigger_type／
+        market_cap_tier 列舉），供推播階段跟分析階段脫鉤後（--notify-only）重新格式化
+        訊息用，不用重跑一次三大法人門檻判斷。
+        """
+        payload = self._read_json(self._report_dir(report_date) / "institutional_alerts.json") or []
+        return [self._institutional_alert_from_dict(row) for row in payload]
+
+    @staticmethod
+    def _institutional_alert_from_dict(row: dict) -> InstitutionalAlert:
+        tier = row.get("market_cap_tier")
+        return InstitutionalAlert(
+            scope=AlertScope(row["scope"]),
+            trigger_type=AlertTriggerType(row["trigger_type"]),
+            stock_id=row.get("stock_id"),
+            estimated_amount=row.get("estimated_amount"),
+            market_cap_tier=MarketCapTier(tier) if tier else None,
+            volume_ratio_pct=row.get("volume_ratio_pct"),
+        )
+
+    # --- DAILY_FULL_REPORT（完整版 Markdown 日報，純文字檔，不分陣列/物件結構） ---
+    def write_daily_report_md(self, report_date: str, content: str) -> None:
+        path = self._report_dir(report_date) / "daily_report.md"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
 
     # --- NOTIFICATION_LOG（同一天可能有多位收訊者，逐筆附加） ---
     def append_notification_log(self, report_date: str, entry: NotificationLogEntry) -> None:

@@ -169,9 +169,12 @@ def test_message_formatter_omits_brackets_when_no_classification_available():
     assert "9999 無分類個股 []" not in "\n".join(messages)
 
 
-def test_message_formatter_groups_etf_rebalance_lines_by_first_seen_industry_order():
-    """同一 ETF 底下的換倉項目要依產業別分組相鄰顯示，組間順序＝清單中各產業第一次
-    出現的順序；查無產業別的股票統一排到最後。
+def test_message_formatter_groups_etf_rebalance_lines_by_first_seen_concept_order():
+    """同一 ETF 底下的換倉項目要依「該股票的第一個概念分類」分組相鄰顯示，組前印出
+    可視的 [分類] 標題，組間順序＝清單中各分類第一次出現的順序；查無概念分類的股票
+    統一歸進 [未分類] 並排在最後。分組依據雖然只取第一個概念，但每行後面的 []
+    標籤仍完整列出該股票的所有概念（此處以世芯-KY 驗證：分組於「半導體」，
+    inline 標籤仍同時顯示「半導體」與其他概念）。
     """
     formatter = MessageFormatter()
     events = [
@@ -180,16 +183,61 @@ def test_message_formatter_groups_etf_rebalance_lines_by_first_seen_industry_ord
         RebalanceEvent("2026-08-05", "00985A", "3529", "力旺", RebalanceEventType.DELETION, 500, 0, None),
         RebalanceEvent("2026-08-05", "00985A", "9999", "無分類個股", RebalanceEventType.ADDITION, 0, 100, None),
     ]
-    industry_map = {"3661": "半導體業", "2603": "航運業", "3529": "半導體業"}
+    concept_map = {"3661": ["半導體", "IC設計"], "2603": ["航運"], "3529": ["半導體"]}
 
-    messages = formatter.format("2026-08-05", [], [], [], events, industry_map, {})
+    messages = formatter.format("2026-08-05", [], [], [], events, {}, concept_map)
     combined = "\n".join(messages)
 
-    # 半導體業（世芯、力旺）相鄰在前，航運業（長榮）在其後，無產業別的排最後
-    semiconductor_block = "3661 世芯-KY [半導體] (新建倉 +40,000 股)\n  3529 力旺 [半導體] (完全清倉)"
+    # 半導體（世芯、力旺）相鄰在前、有可視標題，航運（長榮）在其後，無概念分類的排最後
+    semiconductor_block = (
+        "[半導體]\n"
+        "  3661 世芯-KY [半導體, IC設計] (新建倉 +40,000 股)\n"
+        "  3529 力旺 [半導體] (完全清倉)"
+    )
     assert semiconductor_block in combined
+    assert "[航運]" in combined
+    assert "[未分類]" in combined
     assert combined.index("長榮") > combined.index("力旺")
     assert combined.index("無分類個股") > combined.index("長榮")
+
+
+def test_message_formatter_groups_stock_alerts_by_first_seen_concept_order():
+    """個股買賣超區塊本次比照 ETF 換倉動態，改為依第一個概念分類分組並印出 [分類] 標題；
+    查無概念分類的股票歸進 [未分類]。
+    """
+    formatter = MessageFormatter()
+    stock_alerts = [
+        InstitutionalAlert(
+            scope=AlertScope.STOCK, trigger_type=AlertTriggerType.TIERED_AMOUNT,
+            stock_id="2330", estimated_amount=-800_000_000, market_cap_tier=MarketCapTier.LARGE,
+        ),
+        InstitutionalAlert(
+            scope=AlertScope.STOCK, trigger_type=AlertTriggerType.TIERED_AMOUNT,
+            stock_id="2049", estimated_amount=700_000_000, market_cap_tier=MarketCapTier.LARGE,
+        ),
+    ]
+    institutional_trades = [_institutional_trade("2330", "台積電"), _institutional_trade("2049", "上銀")]
+    concept_map = {"2330": ["半導體"]}
+
+    messages = formatter.format("2026-08-05", [], stock_alerts, institutional_trades, [], {}, concept_map)
+    combined = "\n".join(messages)
+
+    assert "[半導體]" in combined
+    assert "[未分類]" in combined
+    assert combined.index("2330 台積電") < combined.index("2049 上銀")
+    assert combined.index("[半導體]") < combined.index("[未分類]")
+
+
+def test_message_formatter_appends_report_link_when_provided():
+    formatter = MessageFormatter()
+    messages = formatter.format("2026-08-05", [], [], [], [], report_link="https://tinyurl.com/abc123")
+    assert "📄 完整資料：https://tinyurl.com/abc123" in "\n".join(messages)
+
+
+def test_message_formatter_omits_report_link_section_when_not_provided():
+    formatter = MessageFormatter()
+    messages = formatter.format("2026-08-05", [], [], [], [])
+    assert "完整資料" not in "\n".join(messages)
 
 
 class _FakeConfig:

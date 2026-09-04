@@ -30,12 +30,10 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run chip monitor
-        id: run
+      - name: Prepare (fetch/analyze/report)
+        id: prepare
         env:
           FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
-          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
-          LINE_CHANNEL_SECRET: ${{ secrets.LINE_CHANNEL_SECRET }}
         run: |
           # 一律先把「這次實際要跑哪一天」算成一個明確的變數，而不是分別在跑
           # main.py 跟寫 commit message 時各自重算一次——不然手動補跑指定日期時，
@@ -47,17 +45,43 @@ jobs:
             TARGET_DATE="$(date +'%Y-%m-%d')"
           fi
           echo "target_date=$TARGET_DATE" >> "$GITHUB_OUTPUT"
-          python main.py --date "$TARGET_DATE"
+          python main.py --date "$TARGET_DATE" --skip-notify
 
-          # 跟上面的分析流程完全無關，單純清掉超過保留天數的舊快照/報告目錄；
+          # 跟上面的抓取/分析完全無關，單純清掉超過保留天數的舊快照/報告目錄；
           # 這行失敗會讓這個 step 中止（沒接著跑 commit），失敗時 GitHub Actions
           # 預設就會寄失敗通知信，不需要另外處理。
           python main.py --purge
 
       - name: Commit snapshot data
+        id: commit
+        # 刻意不讓這個 step 失敗直接中止整個 job：commit/push 失敗（如版本衝突）
+        # 不該連帶讓當天的 LINE 通知也發不出去，兩者責任分離。實際是否成功另外
+        # 靠 steps.commit.outcome 判斷，並在最後一個 step 明確讓 job 標記失敗。
+        continue-on-error: true
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/
-          git diff --cached --quiet || git commit -m "chore: 更新籌碼快照資料 ${{ steps.run.outputs.target_date }}"
+          git diff --cached --quiet || git commit -m "chore: 更新籌碼快照資料 ${{ steps.prepare.outputs.target_date }}"
           git push
+
+      - name: Notify
+        env:
+          FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
+          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+          LINE_CHANNEL_SECRET: ${{ secrets.LINE_CHANNEL_SECRET }}
+        run: |
+          TARGET_DATE="${{ steps.prepare.outputs.target_date }}"
+          # 連結只在版控回寫成功時才附上（此時報告檔案才真的存在於 GitHub 上）；
+          # 回寫失敗時仍然照常推播，只是這次沒有連結，不能因為 commit 失敗
+          # 就連當天的通知本身也一起不見。
+          if [ "${{ steps.commit.outcome }}" = "success" ]; then
+            REPORT_URL="https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/data/reports/$TARGET_DATE/daily_report.md"
+            python main.py --date "$TARGET_DATE" --notify-only --report-url "$REPORT_URL"
+          else
+            python main.py --date "$TARGET_DATE" --notify-only
+          fi
+
+      - name: Fail job if commit step failed
+        if: steps.commit.outcome != 'success'
+        run: exit 1

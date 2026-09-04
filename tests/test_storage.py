@@ -11,8 +11,14 @@ from src.models import (
     EtfHoldingRecord,
     InstitutionalAlert,
     InstitutionalTradeRecord,
+    LimitType,
+    LimitUpDownRecord,
+    MarketCapTier,
     MarketInstitutionalRecord,
+    MarketType,
     NotificationLogEntry,
+    RebalanceEvent,
+    RebalanceEventType,
     SendStatus,
     SnapshotStatus,
     SourceStatus,
@@ -110,6 +116,9 @@ def test_read_missing_files_returns_empty_defaults(tmp_path):
     assert repo.read_stock_trading("2026-07-29") == []
     assert repo.read_market_institutional("2026-07-29") is None
     assert repo.read_capital_stock_cache("2330") is None
+    assert repo.read_limit_up_down("2026-07-29") == []
+    assert repo.read_institutional_alerts("2026-07-29") == []
+    assert repo.read_rebalance_events("2026-07-29") == []
 
 
 def test_institutional_trades_roundtrip(tmp_path):
@@ -182,6 +191,66 @@ def test_institutional_alerts_roundtrip(tmp_path):
     assert len(saved) == 2
     assert saved[0]["scope"] == "MARKET"
     assert saved[1]["stock_id"] == "2330"
+
+
+def test_read_institutional_alerts_restores_dataclasses_with_enums(tmp_path):
+    """--notify-only 讀回這份資料時要拿到真正的 InstitutionalAlert（含列舉），
+    不是原始 dict，才能直接餵給 MessageFormatter 重新組版，不用重跑一次門檻判斷。
+    """
+    repo = _make_repo(tmp_path)
+    alerts = [
+        InstitutionalAlert(scope=AlertScope.MARKET, trigger_type=AlertTriggerType.MARKET_FOREIGN, estimated_amount=-25_000_000_000),
+        InstitutionalAlert(
+            scope=AlertScope.STOCK, trigger_type=AlertTriggerType.VOLUME_AND_AMOUNT, stock_id="2330",
+            estimated_amount=-800_000_000, market_cap_tier=MarketCapTier.LARGE, volume_ratio_pct=18.7,
+        ),
+    ]
+    repo.write_institutional_alerts("2026-07-29", alerts)
+
+    loaded = repo.read_institutional_alerts("2026-07-29")
+
+    assert loaded == alerts
+
+
+def test_limit_up_down_roundtrip(tmp_path):
+    repo = _make_repo(tmp_path)
+    records = [
+        LimitUpDownRecord("2026-08-31", "1101", "台泥", MarketType.TWSE, LimitType.UP, 110.0, 100.0, 10.0),
+        LimitUpDownRecord("2026-08-31", "6789", "上櫃甲", MarketType.TPEX, LimitType.DOWN, 45.0, 50.0, -10.0),
+    ]
+    repo.write_limit_up_down("2026-08-31", records)
+
+    loaded = repo.read_limit_up_down("2026-08-31")
+    assert [r["stock_id"] for r in loaded] == ["1101", "6789"]
+    assert loaded[0]["market"] == "TWSE"
+    assert loaded[1]["limit_type"] == "DOWN"
+
+
+def test_daily_report_md_write_then_read_back_from_disk(tmp_path):
+    """daily_report.md 是純文字檔，沒有對應的 read 方法（呼叫端不需要讀回，短網址
+    只是把路徑組成 GitHub 網址），這裡直接驗證檔案內容確實落地在預期路徑。
+    """
+    repo = _make_repo(tmp_path)
+    repo.write_daily_report_md("2026-08-31", "# 籌碼監控完整日報 2026-08-31\n\n內容")
+
+    path = tmp_path / "data" / "reports" / "2026-08-31" / "daily_report.md"
+    assert path.read_text(encoding="utf-8") == "# 籌碼監控完整日報 2026-08-31\n\n內容"
+
+
+def test_read_rebalance_events_restores_dataclasses_with_enum(tmp_path):
+    """--notify-only 讀回這份資料時要拿到真正的 RebalanceEvent（含 event_type 列舉），
+    不是原始 dict，才能直接餵給 MessageFormatter 重新組版，不用重跑一次換倉比對。
+    """
+    repo = _make_repo(tmp_path)
+    events = [
+        RebalanceEvent("2026-07-29", "0050", "3231", "緯創", RebalanceEventType.ADDITION, 0, 520, None),
+        RebalanceEvent("2026-07-29", "0050", "2317", "鴻海", RebalanceEventType.REBALANCE, 1000, 1150, 15.0),
+    ]
+    repo.write_rebalance_events("2026-07-29", events)
+
+    loaded = repo.read_rebalance_events("2026-07-29")
+
+    assert loaded == events
 
 
 def test_append_notification_log_accumulates_entries(tmp_path):
