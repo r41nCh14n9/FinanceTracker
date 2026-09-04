@@ -1,0 +1,352 @@
+[
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "2330",
+    "component_name": "台積電",
+    "holding_shares": 31956000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "2454",
+    "component_name": "聯發科",
+    "holding_shares": 2600000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "2308",
+    "component_name": "台達電",
+    "holding_shares": 3600000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "2887",
+    "component_name": "台新新光金",
+    "holding_shares": 140613350
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "2317",
+    "component_name": "鴻海",
+    "holding_shares": 21410000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "2885",
+    "component_name": "元大金",
+    "holding_shares": 74852320
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "2412",
+    "component_name": "中華電",
+    "holding_shares": 29215000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "2884",
+    "component_name": "玉山金",
+    "holding_shares": 90479000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "2883",
+    "component_name": "凱基金",
+    "holding_shares": 96221000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "2890",
+    "component_name": "永豐金",
+    "holding_shares": 82228100
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "2886",
+    "component_name": "兆豐金",
+    "holding_shares": 67196000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "3711",
+    "component_name": "日月光投控",
+    "holding_shares": 5600000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "2383",
+    "component_name": "台光電",
+    "holding_shares": 570000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "2303",
+    "component_name": "聯電",
+    "holding_shares": 20300000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "2880",
+    "component_name": "華南金",
+    "holding_shares": 60278880
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "2881",
+    "component_name": "富邦金",
+    "holding_shares": 17600000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "2892",
+    "component_name": "第一金",
+    "holding_shares": 67073000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "3037",
+    "component_name": "欣興",
+    "holding_shares": 2550000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "2891",
+    "component_name": "中信金",
+    "holding_shares": 33455000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "1303",
+    "component_name": "南亞",
+    "holding_shares": 9806000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "3017",
+    "component_name": "奇鋐",
+    "holding_shares": 598000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "2882",
+    "component_name": "國泰金",
+    "holding_shares": 17066000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "2327",
+    "component_name": "國巨*",
+    "holding_shares": 3289000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "2345",
+    "component_name": "智邦",
+    "holding_shares": 880000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "2408",
+    "component_name": "南亞科",
+    "holding_shares": 3700000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "5880",
+    "component_name": "合庫金",
+    "holding_shares": 66168175
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "2059",
+    "component_name": "川湖",
+    "holding_shares": 124000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "2382",
+    "component_name": "廣達",
+    "holding_shares": 4720000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "6669",
+    "component_name": "緯穎",
+    "holding_shares": 602524
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "2360",
+    "component_name": "致茂",
+    "holding_shares": 700000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "3008",
+    "component_name": "大立光",
+    "holding_shares": 157000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "2357",
+    "component_name": "華碩",
+    "holding_shares": 1100000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "7769",
+    "component_name": "鴻勁",
+    "holding_shares": 180000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "2301",
+    "component_name": "光寶科",
+    "holding_shares": 3477000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "3653",
+    "component_name": "健策",
+    "holding_shares": 180000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "3231",
+    "component_name": "緯創",
+    "holding_shares": 5199000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "2344",
+    "component_name": "華邦電",
+    "holding_shares": 5371000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "3443",
+    "component_name": "創意電子",
+    "holding_shares": 155000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "2603",
+    "component_name": "長榮",
+    "holding_shares": 3654000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "6446",
+    "component_name": "藥華藥",
+    "holding_shares": 640000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "3665",
+    "component_name": "貿聯-KY",
+    "holding_shares": 340000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "3481",
+    "component_name": "群創",
+    "holding_shares": 14212000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "4958",
+    "component_name": "臻鼎-KY",
+    "holding_shares": 1400000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "1216",
+    "component_name": "統一",
+    "holding_shares": 8200000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "2368",
+    "component_name": "金像電",
+    "holding_shares": 603000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "2395",
+    "component_name": "研華",
+    "holding_shares": 880000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "3045",
+    "component_name": "台灣大",
+    "holding_shares": 3970000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "8046",
+    "component_name": "南電",
+    "holding_shares": 440000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "4904",
+    "component_name": "遠傳",
+    "holding_shares": 4200000
+  },
+  {
+    "snapshot_date": "2026-09-04",
+    "etf_id": "009816",
+    "component_stock_id": "6505",
+    "component_name": "台塑化",
+    "holding_shares": 3877000
+  }
+]
