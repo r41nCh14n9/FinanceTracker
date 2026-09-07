@@ -226,5 +226,105 @@
         "stock_name": "廣明"
       }
     ]
+  },
+  "散熱": {
+    "members": [
+      {
+        "stock_id": "3017",
+        "stock_name": "奇鋐"
+      },
+      {
+        "stock_id": "3324",
+        "stock_name": "雙鴻"
+      },
+      {
+        "stock_id": "3376",
+        "stock_name": "新日興"
+      },
+      {
+        "stock_id": "8996",
+        "stock_name": "高力"
+      }
+    ]
+  },
+  "紡織成衣": {
+    "members": [
+      {
+        "stock_id": "1476",
+        "stock_name": "儒鴻"
+      },
+      {
+        "stock_id": "1477",
+        "stock_name": "聚陽"
+      },
+      {
+        "stock_id": "6890",
+        "stock_name": "來億-KY"
+      }
+    ]
+  },
+  "航運": {
+    "members": [
+      {
+        "stock_id": "2603",
+        "stock_name": "長榮"
+      },
+      {
+        "stock_id": "2609",
+        "stock_name": "陽明"
+      },
+      {
+        "stock_id": "2606",
+        "stock_name": "裕民"
+      }
+    ]
+  },
+  "自行車": {
+    "members": [
+      {
+        "stock_id": "9921",
+        "stock_name": "巨大"
+      },
+      {
+        "stock_id": "9914",
+        "stock_name": "美利達"
+      },
+      {
+        "stock_id": "5306",
+        "stock_name": "桂盟"
+      }
+    ]
+  },
+  "汽車零件AM": {
+    "members": [
+      {
+        "stock_id": "1319",
+        "stock_name": "東陽"
+      },
+      {
+        "stock_id": "6605",
+        "stock_name": "帝寶"
+      },
+      {
+        "stock_id": "1524",
+        "stock_name": "耿鼎"
+      }
+    ]
+  },
+  "營建": {
+    "members": [
+      {
+        "stock_id": "2548",
+        "stock_name": "華固"
+      },
+      {
+        "stock_id": "5534",
+        "stock_name": "長虹"
+      },
+      {
+        "stock_id": "5522",
+        "stock_name": "遠雄"
+      }
+    ]
   }
 }
