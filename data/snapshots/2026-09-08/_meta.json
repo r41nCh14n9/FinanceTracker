@@ -1,29 +1,29 @@
 {
-  "snapshot_date": "2026-09-07",
+  "snapshot_date": "2026-09-08",
   "sources": {
     "FINMIND_INSTITUTIONAL": {
       "status": "OK",
-      "fetched_at": "2026-09-07T17:07:36.251742+00:00",
+      "fetched_at": "2026-09-08T15:53:27.918583+00:00",
       "error_message": null
     },
     "FINMIND_PRICE": {
       "status": "OK",
-      "fetched_at": "2026-09-07T17:07:55.048769+00:00",
+      "fetched_at": "2026-09-08T15:53:48.550179+00:00",
       "error_message": null
     },
     "FINMIND_BALANCE_SHEET": {
       "status": "OK",
-      "fetched_at": "2026-09-07T17:07:56.285295+00:00",
+      "fetched_at": "2026-09-08T15:53:50.068377+00:00",
       "error_message": null
     },
     "FINMIND_MARKET": {
       "status": "OK",
-      "fetched_at": "2026-09-07T17:07:56.678428+00:00",
+      "fetched_at": "2026-09-08T15:53:50.567931+00:00",
       "error_message": null
     },
     "ISSUER_PCF": {
       "status": "OK",
-      "fetched_at": "2026-09-08T15:54:14.439086+00:00",
+      "fetched_at": "2026-09-08T15:54:13.153013+00:00",
       "error_message": null
     }
   },
