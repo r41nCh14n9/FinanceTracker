@@ -1,0 +1,62 @@
+[
+  {
+    "event_date": "2026-09-11",
+    "etf_id": "00991A",
+    "component_stock_id": "8299",
+    "component_name": "群聯電子",
+    "event_type": "REBALANCE",
+    "prev_shares": 780000,
+    "curr_shares": 1000,
+    "change_pct": -99.87179487179488
+  },
+  {
+    "event_date": "2026-09-11",
+    "etf_id": "00991A",
+    "component_stock_id": "2345",
+    "component_name": "智邦科技",
+    "event_type": "REBALANCE",
+    "prev_shares": 1350000,
+    "curr_shares": 1100000,
+    "change_pct": -18.51851851851852
+  },
+  {
+    "event_date": "2026-09-11",
+    "etf_id": "00991A",
+    "component_stock_id": "3711",
+    "component_name": "日月光投",
+    "event_type": "REBALANCE",
+    "prev_shares": 9000,
+    "curr_shares": 2500000,
+    "change_pct": 27677.777777777777
+  },
+  {
+    "event_date": "2026-09-11",
+    "etf_id": "00403A",
+    "component_stock_id": "3711",
+    "component_name": "日月光投控",
+    "event_type": "REBALANCE",
+    "prev_shares": 4000000,
+    "curr_shares": 2000000,
+    "change_pct": -50.0
+  },
+  {
+    "event_date": "2026-09-11",
+    "etf_id": "00407A",
+    "component_stock_id": "2059",
+    "component_name": "川湖",
+    "event_type": "REBALANCE",
+    "prev_shares": 67000,
+    "curr_shares": 56000,
+    "change_pct": -16.417910447761194
+  },
+  {
+    "event_date": "2026-09-11",
+    "etf_id": "00407A",
+    "component_stock_id": "2308",
+    "component_name": "台達電",
+    "event_type": "REBALANCE",
+    "prev_shares": 418000,
+    "curr_shares": 368000,
+    "change_pct": -11.961722488038278
+  }
+]
