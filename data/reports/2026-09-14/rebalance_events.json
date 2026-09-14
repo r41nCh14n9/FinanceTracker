@@ -1,0 +1,52 @@
+[
+  {
+    "event_date": "2026-09-14",
+    "etf_id": "00981A",
+    "component_stock_id": "3443",
+    "component_name": "創意",
+    "event_type": "REBALANCE",
+    "prev_shares": 372000,
+    "curr_shares": 413000,
+    "change_pct": 11.021505376344086
+  },
+  {
+    "event_date": "2026-09-14",
+    "etf_id": "00981A",
+    "component_stock_id": "8996",
+    "component_name": "高力",
+    "event_type": "REBALANCE",
+    "prev_shares": 700000,
+    "curr_shares": 485000,
+    "change_pct": -30.714285714285715
+  },
+  {
+    "event_date": "2026-09-14",
+    "etf_id": "00981A",
+    "component_stock_id": "6510",
+    "component_name": "精測",
+    "event_type": "REBALANCE",
+    "prev_shares": 637000,
+    "curr_shares": 446000,
+    "change_pct": -29.984301412872842
+  },
+  {
+    "event_date": "2026-09-14",
+    "etf_id": "00403A",
+    "component_stock_id": "3008",
+    "component_name": "大立光",
+    "event_type": "REBALANCE",
+    "prev_shares": 600000,
+    "curr_shares": 536000,
+    "change_pct": -10.666666666666668
+  },
+  {
+    "event_date": "2026-09-14",
+    "etf_id": "00403A",
+    "component_stock_id": "2344",
+    "component_name": "華邦電",
+    "event_type": "REBALANCE",
+    "prev_shares": 1000000,
+    "curr_shares": 1000,
+    "change_pct": -99.9
+  }
+]
