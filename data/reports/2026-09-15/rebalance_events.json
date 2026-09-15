@@ -1,0 +1,52 @@
+[
+  {
+    "event_date": "2026-09-15",
+    "etf_id": "00403A",
+    "component_stock_id": "3008",
+    "component_name": "大立光",
+    "event_type": "REBALANCE",
+    "prev_shares": 536000,
+    "curr_shares": 380000,
+    "change_pct": -29.1044776119403
+  },
+  {
+    "event_date": "2026-09-15",
+    "etf_id": "00403A",
+    "component_stock_id": "3711",
+    "component_name": "日月光投控",
+    "event_type": "REBALANCE",
+    "prev_shares": 2000000,
+    "curr_shares": 1000000,
+    "change_pct": -50.0
+  },
+  {
+    "event_date": "2026-09-15",
+    "etf_id": "00407A",
+    "component_stock_id": "3008",
+    "component_name": "大立光",
+    "event_type": "REBALANCE",
+    "prev_shares": 80000,
+    "curr_shares": 60000,
+    "change_pct": -25.0
+  },
+  {
+    "event_date": "2026-09-15",
+    "etf_id": "00407A",
+    "component_stock_id": "6805",
+    "component_name": "富世達",
+    "event_type": "REBALANCE",
+    "prev_shares": 325000,
+    "curr_shares": 225000,
+    "change_pct": -30.76923076923077
+  },
+  {
+    "event_date": "2026-09-15",
+    "etf_id": "00407A",
+    "component_stock_id": "2368",
+    "component_name": "金像電",
+    "event_type": "REBALANCE",
+    "prev_shares": 210000,
+    "curr_shares": 130000,
+    "change_pct": -38.095238095238095
+  }
+]
