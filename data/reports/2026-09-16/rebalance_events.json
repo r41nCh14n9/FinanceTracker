@@ -1,0 +1,62 @@
+[
+  {
+    "event_date": "2026-09-16",
+    "etf_id": "00991A",
+    "component_stock_id": "3653",
+    "component_name": "健策精密",
+    "event_type": "REBALANCE",
+    "prev_shares": 340000,
+    "curr_shares": 290000,
+    "change_pct": -14.705882352941178
+  },
+  {
+    "event_date": "2026-09-16",
+    "etf_id": "00403A",
+    "component_stock_id": "2059",
+    "component_name": "川湖",
+    "event_type": "REBALANCE",
+    "prev_shares": 35000,
+    "curr_shares": 45000,
+    "change_pct": 28.57142857142857
+  },
+  {
+    "event_date": "2026-09-16",
+    "etf_id": "00403A",
+    "component_stock_id": "3533",
+    "component_name": "嘉澤",
+    "event_type": "REBALANCE",
+    "prev_shares": 200000,
+    "curr_shares": 160000,
+    "change_pct": -20.0
+  },
+  {
+    "event_date": "2026-09-16",
+    "etf_id": "00403A",
+    "component_stock_id": "2408",
+    "component_name": "南亞科",
+    "event_type": "ADDITION",
+    "prev_shares": 0,
+    "curr_shares": 760000,
+    "change_pct": null
+  },
+  {
+    "event_date": "2026-09-16",
+    "etf_id": "00407A",
+    "component_stock_id": "8210",
+    "component_name": "勤誠",
+    "event_type": "DELETION",
+    "prev_shares": 246000,
+    "curr_shares": 0,
+    "change_pct": null
+  },
+  {
+    "event_date": "2026-09-16",
+    "etf_id": "00407A",
+    "component_stock_id": "3231",
+    "component_name": "緯創",
+    "event_type": "ADDITION",
+    "prev_shares": 0,
+    "curr_shares": 1000000,
+    "change_pct": null
+  }
+]
