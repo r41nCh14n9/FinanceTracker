@@ -1,0 +1,172 @@
+[
+  {
+    "event_date": "2026-09-17",
+    "etf_id": "00981A",
+    "component_stock_id": "3264",
+    "component_name": "欣銓",
+    "event_type": "REBALANCE",
+    "prev_shares": 5028000,
+    "curr_shares": 6628000,
+    "change_pct": 31.821797931583134
+  },
+  {
+    "event_date": "2026-09-17",
+    "etf_id": "00991A",
+    "component_stock_id": "6669",
+    "component_name": "緯穎科技",
+    "event_type": "REBALANCE",
+    "prev_shares": 1500020,
+    "curr_shares": 1150020,
+    "change_pct": -23.333022226370314
+  },
+  {
+    "event_date": "2026-09-17",
+    "etf_id": "00991A",
+    "component_stock_id": "2912",
+    "component_name": "統一超商",
+    "event_type": "DELETION",
+    "prev_shares": 1000,
+    "curr_shares": 0,
+    "change_pct": null
+  },
+  {
+    "event_date": "2026-09-17",
+    "etf_id": "00991A",
+    "component_stock_id": "2345",
+    "component_name": "智邦科技",
+    "event_type": "REBALANCE",
+    "prev_shares": 1100000,
+    "curr_shares": 850000,
+    "change_pct": -22.727272727272727
+  },
+  {
+    "event_date": "2026-09-17",
+    "etf_id": "00991A",
+    "component_stock_id": "1303",
+    "component_name": "南亞塑膠",
+    "event_type": "ADDITION",
+    "prev_shares": 0,
+    "curr_shares": 6700000,
+    "change_pct": null
+  },
+  {
+    "event_date": "2026-09-17",
+    "etf_id": "00991A",
+    "component_stock_id": "6274",
+    "component_name": "台燿科技",
+    "event_type": "REBALANCE",
+    "prev_shares": 1400000,
+    "curr_shares": 1000,
+    "change_pct": -99.92857142857143
+  },
+  {
+    "event_date": "2026-09-17",
+    "etf_id": "00991A",
+    "component_stock_id": "2303",
+    "component_name": "聯華電子",
+    "event_type": "REBALANCE",
+    "prev_shares": 9000,
+    "curr_shares": 10400000,
+    "change_pct": 115455.55555555556
+  },
+  {
+    "event_date": "2026-09-17",
+    "etf_id": "00985A",
+    "component_stock_id": "3105",
+    "component_name": "穩懋半導體",
+    "event_type": "REBALANCE",
+    "prev_shares": 2000,
+    "curr_shares": 217000,
+    "change_pct": 10750.0
+  },
+  {
+    "event_date": "2026-09-17",
+    "etf_id": "00985A",
+    "component_stock_id": "8046",
+    "component_name": "南亞電路板",
+    "event_type": "REBALANCE",
+    "prev_shares": 102000,
+    "curr_shares": 192000,
+    "change_pct": 88.23529411764706
+  },
+  {
+    "event_date": "2026-09-17",
+    "etf_id": "00985A",
+    "component_stock_id": "3017",
+    "component_name": "奇鋐科技",
+    "event_type": "REBALANCE",
+    "prev_shares": 52000,
+    "curr_shares": 58000,
+    "change_pct": 11.538461538461538
+  },
+  {
+    "event_date": "2026-09-17",
+    "etf_id": "00985A",
+    "component_stock_id": "3189",
+    "component_name": "景碩科技",
+    "event_type": "REBALANCE",
+    "prev_shares": 1000,
+    "curr_shares": 196000,
+    "change_pct": 19500.0
+  },
+  {
+    "event_date": "2026-09-17",
+    "etf_id": "00985A",
+    "component_stock_id": "2327",
+    "component_name": "國巨",
+    "event_type": "REBALANCE",
+    "prev_shares": 295000,
+    "curr_shares": 327000,
+    "change_pct": 10.847457627118644
+  },
+  {
+    "event_date": "2026-09-17",
+    "etf_id": "00403A",
+    "component_stock_id": "3008",
+    "component_name": "大立光",
+    "event_type": "REBALANCE",
+    "prev_shares": 380000,
+    "curr_shares": 280000,
+    "change_pct": -26.31578947368421
+  },
+  {
+    "event_date": "2026-09-17",
+    "etf_id": "00403A",
+    "component_stock_id": "3533",
+    "component_name": "嘉澤",
+    "event_type": "REBALANCE",
+    "prev_shares": 160000,
+    "curr_shares": 120000,
+    "change_pct": -25.0
+  },
+  {
+    "event_date": "2026-09-17",
+    "etf_id": "00403A",
+    "component_stock_id": "3450",
+    "component_name": "聯鈞",
+    "event_type": "REBALANCE",
+    "prev_shares": 1102000,
+    "curr_shares": 1300000,
+    "change_pct": 17.96733212341198
+  },
+  {
+    "event_date": "2026-09-17",
+    "etf_id": "00403A",
+    "component_stock_id": "2059",
+    "component_name": "川湖",
+    "event_type": "REBALANCE",
+    "prev_shares": 45000,
+    "curr_shares": 55000,
+    "change_pct": 22.22222222222222
+  },
+  {
+    "event_date": "2026-09-17",
+    "etf_id": "00403A",
+    "component_stock_id": "2408",
+    "component_name": "南亞科",
+    "event_type": "REBALANCE",
+    "prev_shares": 760000,
+    "curr_shares": 1200000,
+    "change_pct": 57.89473684210527
+  }
+]
