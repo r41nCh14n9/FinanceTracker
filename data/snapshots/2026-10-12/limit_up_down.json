@@ -1,0 +1,672 @@
+[
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "1454",
+    "stock_name": "台富",
+    "market": "TWSE",
+    "limit_type": "UP",
+    "close_price": 13.4,
+    "prev_close_price": 12.2,
+    "change_pct": 9.84
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "1516",
+    "stock_name": "川飛",
+    "market": "TWSE",
+    "limit_type": "UP",
+    "close_price": 15.4,
+    "prev_close_price": 14.0,
+    "change_pct": 10.0
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "1530",
+    "stock_name": "亞崴",
+    "market": "TWSE",
+    "limit_type": "UP",
+    "close_price": 28.8,
+    "prev_close_price": 26.2,
+    "change_pct": 9.92
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "1563",
+    "stock_name": "巧新",
+    "market": "TWSE",
+    "limit_type": "UP",
+    "close_price": 87.2,
+    "prev_close_price": 79.3,
+    "change_pct": 9.96
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "1615",
+    "stock_name": "大山",
+    "market": "TWSE",
+    "limit_type": "UP",
+    "close_price": 50.6,
+    "prev_close_price": 46.05,
+    "change_pct": 9.88
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "2030",
+    "stock_name": "彰源",
+    "market": "TWSE",
+    "limit_type": "DOWN",
+    "close_price": 32.0,
+    "prev_close_price": 35.55,
+    "change_pct": -9.99
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "2305",
+    "stock_name": "全友",
+    "market": "TWSE",
+    "limit_type": "UP",
+    "close_price": 71.1,
+    "prev_close_price": 64.7,
+    "change_pct": 9.89
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "2355",
+    "stock_name": "敬鵬",
+    "market": "TWSE",
+    "limit_type": "UP",
+    "close_price": 49.7,
+    "prev_close_price": 45.2,
+    "change_pct": 9.96
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "2424",
+    "stock_name": "隴華",
+    "market": "TWSE",
+    "limit_type": "UP",
+    "close_price": 10.75,
+    "prev_close_price": 9.79,
+    "change_pct": 9.81
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "2429",
+    "stock_name": "銘旺科",
+    "market": "TWSE",
+    "limit_type": "UP",
+    "close_price": 33.0,
+    "prev_close_price": 30.0,
+    "change_pct": 10.0
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "2466",
+    "stock_name": "冠西電",
+    "market": "TWSE",
+    "limit_type": "UP",
+    "close_price": 218.0,
+    "prev_close_price": 198.5,
+    "change_pct": 9.82
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "2468",
+    "stock_name": "華經",
+    "market": "TWSE",
+    "limit_type": "UP",
+    "close_price": 44.7,
+    "prev_close_price": 40.65,
+    "change_pct": 9.96
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "2603",
+    "stock_name": "長榮",
+    "market": "TWSE",
+    "limit_type": "UP",
+    "close_price": 255.5,
+    "prev_close_price": 232.5,
+    "change_pct": 9.89
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "3008",
+    "stock_name": "大立光",
+    "market": "TWSE",
+    "limit_type": "UP",
+    "close_price": 7325.0,
+    "prev_close_price": 6660.0,
+    "change_pct": 9.98
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "3055",
+    "stock_name": "蔚華科",
+    "market": "TWSE",
+    "limit_type": "DOWN",
+    "close_price": 201.0,
+    "prev_close_price": 223.0,
+    "change_pct": -9.87
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "3311",
+    "stock_name": "閎暉",
+    "market": "TWSE",
+    "limit_type": "UP",
+    "close_price": 51.5,
+    "prev_close_price": 46.9,
+    "change_pct": 9.81
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "3605",
+    "stock_name": "宏致",
+    "market": "TWSE",
+    "limit_type": "UP",
+    "close_price": 179.0,
+    "prev_close_price": 163.0,
+    "change_pct": 9.82
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "4938",
+    "stock_name": "和碩",
+    "market": "TWSE",
+    "limit_type": "UP",
+    "close_price": 98.6,
+    "prev_close_price": 89.7,
+    "change_pct": 9.92
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "4976",
+    "stock_name": "佳凌",
+    "market": "TWSE",
+    "limit_type": "UP",
+    "close_price": 41.0,
+    "prev_close_price": 37.3,
+    "change_pct": 9.92
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "5258",
+    "stock_name": "虹堡",
+    "market": "TWSE",
+    "limit_type": "UP",
+    "close_price": 46.05,
+    "prev_close_price": 41.9,
+    "change_pct": 9.9
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "6225",
+    "stock_name": "天瀚",
+    "market": "TWSE",
+    "limit_type": "UP",
+    "close_price": 78.7,
+    "prev_close_price": 71.6,
+    "change_pct": 9.92
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "6278",
+    "stock_name": "台表科",
+    "market": "TWSE",
+    "limit_type": "UP",
+    "close_price": 272.5,
+    "prev_close_price": 248.0,
+    "change_pct": 9.88
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "6742",
+    "stock_name": "澤米",
+    "market": "TWSE",
+    "limit_type": "UP",
+    "close_price": 63.6,
+    "prev_close_price": 57.9,
+    "change_pct": 9.84
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "6834",
+    "stock_name": "天二科技",
+    "market": "TWSE",
+    "limit_type": "UP",
+    "close_price": 145.0,
+    "prev_close_price": 132.0,
+    "change_pct": 9.85
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "6909",
+    "stock_name": "創控",
+    "market": "TWSE",
+    "limit_type": "UP",
+    "close_price": 47.85,
+    "prev_close_price": 43.5,
+    "change_pct": 10.0
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "6924",
+    "stock_name": "榮惠-KY創",
+    "market": "TWSE",
+    "limit_type": "UP",
+    "close_price": 146.5,
+    "prev_close_price": 133.5,
+    "change_pct": 9.74
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "6934",
+    "stock_name": "心誠鎂",
+    "market": "TWSE",
+    "limit_type": "UP",
+    "close_price": 80.9,
+    "prev_close_price": 73.6,
+    "change_pct": 9.92
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "9103",
+    "stock_name": "美德醫療-DR",
+    "market": "TWSE",
+    "limit_type": "UP",
+    "close_price": 6.46,
+    "prev_close_price": 5.88,
+    "change_pct": 9.86
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "9110",
+    "stock_name": "越南控-DR",
+    "market": "TWSE",
+    "limit_type": "DOWN",
+    "close_price": 3.11,
+    "prev_close_price": 3.45,
+    "change_pct": -9.86
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "1742",
+    "stock_name": "台蠟",
+    "market": "TPEX",
+    "limit_type": "UP",
+    "close_price": 19.35,
+    "prev_close_price": 17.6,
+    "change_pct": 9.94
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "2221",
+    "stock_name": "大甲",
+    "market": "TPEX",
+    "limit_type": "DOWN",
+    "close_price": 173.0,
+    "prev_close_price": 192.0,
+    "change_pct": -9.9
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "3093",
+    "stock_name": "港建*",
+    "market": "TPEX",
+    "limit_type": "DOWN",
+    "close_price": 41.55,
+    "prev_close_price": 46.15,
+    "change_pct": -9.97
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "3230",
+    "stock_name": "錦明",
+    "market": "TPEX",
+    "limit_type": "DOWN",
+    "close_price": 35.95,
+    "prev_close_price": 39.9,
+    "change_pct": -9.9
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "3265",
+    "stock_name": "台星科",
+    "market": "TPEX",
+    "limit_type": "UP",
+    "close_price": 262.0,
+    "prev_close_price": 238.5,
+    "change_pct": 9.85
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "3287",
+    "stock_name": "廣寰科",
+    "market": "TPEX",
+    "limit_type": "UP",
+    "close_price": 47.75,
+    "prev_close_price": 43.45,
+    "change_pct": 9.9
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "3498",
+    "stock_name": "陽程",
+    "market": "TPEX",
+    "limit_type": "UP",
+    "close_price": 248.0,
+    "prev_close_price": 225.5,
+    "change_pct": 9.98
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "3577",
+    "stock_name": "泓格",
+    "market": "TPEX",
+    "limit_type": "DOWN",
+    "close_price": 95.4,
+    "prev_close_price": 106.0,
+    "change_pct": -10.0
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "3580",
+    "stock_name": "友威科",
+    "market": "TPEX",
+    "limit_type": "UP",
+    "close_price": 112.5,
+    "prev_close_price": 102.5,
+    "change_pct": 9.76
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "3629",
+    "stock_name": "地心引力",
+    "market": "TPEX",
+    "limit_type": "UP",
+    "close_price": 16.8,
+    "prev_close_price": 15.3,
+    "change_pct": 9.8
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "3713",
+    "stock_name": "新晶投控",
+    "market": "TPEX",
+    "limit_type": "UP",
+    "close_price": 16.3,
+    "prev_close_price": 14.85,
+    "change_pct": 9.76
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "4430",
+    "stock_name": "耀億",
+    "market": "TPEX",
+    "limit_type": "UP",
+    "close_price": 21.5,
+    "prev_close_price": 19.55,
+    "change_pct": 9.97
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "4542",
+    "stock_name": "科嶠",
+    "market": "TPEX",
+    "limit_type": "UP",
+    "close_price": 361.5,
+    "prev_close_price": 329.0,
+    "change_pct": 9.88
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "4706",
+    "stock_name": "大恭",
+    "market": "TPEX",
+    "limit_type": "DOWN",
+    "close_price": 40.5,
+    "prev_close_price": 45.0,
+    "change_pct": -10.0
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "4903",
+    "stock_name": "聯光通",
+    "market": "TPEX",
+    "limit_type": "UP",
+    "close_price": 50.5,
+    "prev_close_price": 45.95,
+    "change_pct": 9.9
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "5013",
+    "stock_name": "強新",
+    "market": "TPEX",
+    "limit_type": "DOWN",
+    "close_price": 47.7,
+    "prev_close_price": 53.0,
+    "change_pct": -10.0
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "5205",
+    "stock_name": "中茂",
+    "market": "TPEX",
+    "limit_type": "UP",
+    "close_price": 36.6,
+    "prev_close_price": 33.3,
+    "change_pct": 9.91
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "6021",
+    "stock_name": "美好證",
+    "market": "TPEX",
+    "limit_type": "UP",
+    "close_price": 47.55,
+    "prev_close_price": 43.25,
+    "change_pct": 9.94
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "6114",
+    "stock_name": "久威",
+    "market": "TPEX",
+    "limit_type": "UP",
+    "close_price": 24.85,
+    "prev_close_price": 22.6,
+    "change_pct": 9.96
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "6156",
+    "stock_name": "松上",
+    "market": "TPEX",
+    "limit_type": "UP",
+    "close_price": 26.15,
+    "prev_close_price": 23.8,
+    "change_pct": 9.87
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "6185",
+    "stock_name": "幃翔",
+    "market": "TPEX",
+    "limit_type": "UP",
+    "close_price": 13.5,
+    "prev_close_price": 12.3,
+    "change_pct": 9.76
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "6187",
+    "stock_name": "萬潤",
+    "market": "TPEX",
+    "limit_type": "UP",
+    "close_price": 1675.0,
+    "prev_close_price": 1525.0,
+    "change_pct": 9.84
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "6210",
+    "stock_name": "慶生",
+    "market": "TPEX",
+    "limit_type": "UP",
+    "close_price": 19.6,
+    "prev_close_price": 17.85,
+    "change_pct": 9.8
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "6221",
+    "stock_name": "晉泰",
+    "market": "TPEX",
+    "limit_type": "UP",
+    "close_price": 32.6,
+    "prev_close_price": 29.65,
+    "change_pct": 9.95
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "6223",
+    "stock_name": "旺矽",
+    "market": "TPEX",
+    "limit_type": "UP",
+    "close_price": 6130.0,
+    "prev_close_price": 5575.0,
+    "change_pct": 9.96
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "6234",
+    "stock_name": "高僑",
+    "market": "TPEX",
+    "limit_type": "UP",
+    "close_price": 43.45,
+    "prev_close_price": 39.5,
+    "change_pct": 10.0
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "6261",
+    "stock_name": "久元",
+    "market": "TPEX",
+    "limit_type": "UP",
+    "close_price": 84.0,
+    "prev_close_price": 76.4,
+    "change_pct": 9.95
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "6548",
+    "stock_name": "長科*",
+    "market": "TPEX",
+    "limit_type": "UP",
+    "close_price": 85.0,
+    "prev_close_price": 77.3,
+    "change_pct": 9.96
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "6640",
+    "stock_name": "均華",
+    "market": "TPEX",
+    "limit_type": "UP",
+    "close_price": 1155.0,
+    "prev_close_price": 1050.0,
+    "change_pct": 10.0
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "6716",
+    "stock_name": "應廣",
+    "market": "TPEX",
+    "limit_type": "DOWN",
+    "close_price": 125.0,
+    "prev_close_price": 138.5,
+    "change_pct": -9.75
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "6913",
+    "stock_name": "鴻呈",
+    "market": "TPEX",
+    "limit_type": "UP",
+    "close_price": 142.0,
+    "prev_close_price": 129.5,
+    "change_pct": 9.65
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "6925",
+    "stock_name": "意藍",
+    "market": "TPEX",
+    "limit_type": "UP",
+    "close_price": 78.4,
+    "prev_close_price": 71.3,
+    "change_pct": 9.96
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "7723",
+    "stock_name": "築間",
+    "market": "TPEX",
+    "limit_type": "DOWN",
+    "close_price": 20.1,
+    "prev_close_price": 22.3,
+    "change_pct": -9.87
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "7856",
+    "stock_name": "漢測",
+    "market": "TPEX",
+    "limit_type": "DOWN",
+    "close_price": 3835.0,
+    "prev_close_price": 4260.0,
+    "change_pct": -9.98
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "8084",
+    "stock_name": "巨虹",
+    "market": "TPEX",
+    "limit_type": "UP",
+    "close_price": 15.8,
+    "prev_close_price": 14.4,
+    "change_pct": 9.72
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "8111",
+    "stock_name": "立碁",
+    "market": "TPEX",
+    "limit_type": "DOWN",
+    "close_price": 84.4,
+    "prev_close_price": 93.7,
+    "change_pct": -9.93
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "8431",
+    "stock_name": "匯鑽科",
+    "market": "TPEX",
+    "limit_type": "UP",
+    "close_price": 65.5,
+    "prev_close_price": 59.6,
+    "change_pct": 9.9
+  },
+  {
+    "trade_date": "2026-10-12",
+    "stock_id": "8455",
+    "stock_name": "大拓-KY",
+    "market": "TPEX",
+    "limit_type": "UP",
+    "close_price": 25.2,
+    "prev_close_price": 22.95,
+    "change_pct": 9.8
+  }
+]
