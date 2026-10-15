@@ -1,0 +1,162 @@
+[
+  {
+    "scope": "MARKET",
+    "trigger_type": "MARKET_FOREIGN",
+    "stock_id": null,
+    "estimated_amount": -302555484058,
+    "market_cap_tier": null,
+    "volume_ratio_pct": null
+  },
+  {
+    "scope": "MARKET",
+    "trigger_type": "MARKET_TRUST",
+    "stock_id": null,
+    "estimated_amount": 29283279451,
+    "market_cap_tier": null,
+    "volume_ratio_pct": null
+  },
+  {
+    "scope": "MARKET",
+    "trigger_type": "MARKET_DEALER",
+    "stock_id": null,
+    "estimated_amount": -95823384722,
+    "market_cap_tier": null,
+    "volume_ratio_pct": null
+  },
+  {
+    "scope": "STOCK",
+    "trigger_type": "VOLUME_AND_AMOUNT",
+    "stock_id": "2330",
+    "estimated_amount": -57243580960,
+    "market_cap_tier": "LARGE",
+    "volume_ratio_pct": 40.11250350528345
+  },
+  {
+    "scope": "STOCK",
+    "trigger_type": "VOLUME_AND_AMOUNT",
+    "stock_id": "3711",
+    "estimated_amount": -12662501057,
+    "market_cap_tier": "LARGE",
+    "volume_ratio_pct": 48.0409673972933
+  },
+  {
+    "scope": "STOCK",
+    "trigger_type": "VOLUME_RATIO",
+    "stock_id": "3680",
+    "estimated_amount": -283940370,
+    "market_cap_tier": "MID",
+    "volume_ratio_pct": 35.72680346159283
+  },
+  {
+    "scope": "STOCK",
+    "trigger_type": "VOLUME_AND_AMOUNT",
+    "stock_id": "2454",
+    "estimated_amount": -25517630530,
+    "market_cap_tier": "LARGE",
+    "volume_ratio_pct": 32.884362714185485
+  },
+  {
+    "scope": "STOCK",
+    "trigger_type": "VOLUME_AND_AMOUNT",
+    "stock_id": "2308",
+    "estimated_amount": -16860638500,
+    "market_cap_tier": "LARGE",
+    "volume_ratio_pct": 40.827591596595866
+  },
+  {
+    "scope": "STOCK",
+    "trigger_type": "VOLUME_RATIO",
+    "stock_id": "2301",
+    "estimated_amount": -2088244744,
+    "market_cap_tier": "LARGE",
+    "volume_ratio_pct": 35.05989708838854
+  },
+  {
+    "scope": "STOCK",
+    "trigger_type": "VOLUME_AND_AMOUNT",
+    "stock_id": "2327",
+    "estimated_amount": -14544885312,
+    "market_cap_tier": "LARGE",
+    "volume_ratio_pct": 45.38295228986783
+  },
+  {
+    "scope": "STOCK",
+    "trigger_type": "TIERED_AMOUNT",
+    "stock_id": "3037",
+    "estimated_amount": -6742474175,
+    "market_cap_tier": "LARGE",
+    "volume_ratio_pct": 21.512044091248068
+  },
+  {
+    "scope": "STOCK",
+    "trigger_type": "VOLUME_RATIO",
+    "stock_id": "8222",
+    "estimated_amount": 2756000,
+    "market_cap_tier": "SMALL",
+    "volume_ratio_pct": 28.520499108734406
+  },
+  {
+    "scope": "STOCK",
+    "trigger_type": "VOLUME_RATIO",
+    "stock_id": "2313",
+    "estimated_amount": -2168848404,
+    "market_cap_tier": "LARGE",
+    "volume_ratio_pct": 32.4190876912685
+  },
+  {
+    "scope": "STOCK",
+    "trigger_type": "VOLUME_RATIO",
+    "stock_id": "6285",
+    "estimated_amount": -551021195,
+    "market_cap_tier": "LARGE",
+    "volume_ratio_pct": 34.26266622989064
+  },
+  {
+    "scope": "STOCK",
+    "trigger_type": "VOLUME_AND_AMOUNT",
+    "stock_id": "6669",
+    "estimated_amount": -6113164050,
+    "market_cap_tier": "LARGE",
+    "volume_ratio_pct": 31.389962579642365
+  },
+  {
+    "scope": "STOCK",
+    "trigger_type": "VOLUME_RATIO",
+    "stock_id": "2324",
+    "estimated_amount": -416111616,
+    "market_cap_tier": "LARGE",
+    "volume_ratio_pct": 35.61484548831766
+  },
+  {
+    "scope": "STOCK",
+    "trigger_type": "VOLUME_RATIO",
+    "stock_id": "2049",
+    "estimated_amount": -594622670,
+    "market_cap_tier": "LARGE",
+    "volume_ratio_pct": 54.387910219853495
+  },
+  {
+    "scope": "STOCK",
+    "trigger_type": "VOLUME_RATIO",
+    "stock_id": "2464",
+    "estimated_amount": -578901664,
+    "market_cap_tier": "MID",
+    "volume_ratio_pct": 38.12887835244811
+  },
+  {
+    "scope": "STOCK",
+    "trigger_type": "VOLUME_RATIO",
+    "stock_id": "6188",
+    "estimated_amount": -14914874,
+    "market_cap_tier": "MID",
+    "volume_ratio_pct": 25.169751532718305
+  },
+  {
+    "scope": "STOCK",
+    "trigger_type": "VOLUME_RATIO",
+    "stock_id": "3017",
+    "estimated_amount": -3473586600,
+    "market_cap_tier": "LARGE",
+    "volume_ratio_pct": 27.274200475401845
+  }
+]
