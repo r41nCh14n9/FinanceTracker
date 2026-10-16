@@ -1,0 +1,154 @@
+[
+  {
+    "scope": "MARKET",
+    "trigger_type": "MARKET_FOREIGN",
+    "stock_id": null,
+    "estimated_amount": -46147162837,
+    "market_cap_tier": null,
+    "volume_ratio_pct": null
+  },
+  {
+    "scope": "MARKET",
+    "trigger_type": "MARKET_TRUST",
+    "stock_id": null,
+    "estimated_amount": 11047506970,
+    "market_cap_tier": null,
+    "volume_ratio_pct": null
+  },
+  {
+    "scope": "MARKET",
+    "trigger_type": "MARKET_DEALER",
+    "stock_id": null,
+    "estimated_amount": -33414008405,
+    "market_cap_tier": null,
+    "volume_ratio_pct": null
+  },
+  {
+    "scope": "STOCK",
+    "trigger_type": "VOLUME_AND_AMOUNT",
+    "stock_id": "2330",
+    "estimated_amount": -54139828600,
+    "market_cap_tier": "LARGE",
+    "volume_ratio_pct": 51.970728168585666
+  },
+  {
+    "scope": "STOCK",
+    "trigger_type": "VOLUME_RATIO",
+    "stock_id": "6488",
+    "estimated_amount": -3952916682,
+    "market_cap_tier": "LARGE",
+    "volume_ratio_pct": 26.756384341988127
+  },
+  {
+    "scope": "STOCK",
+    "trigger_type": "TIERED_AMOUNT",
+    "stock_id": "2454",
+    "estimated_amount": -5878855000,
+    "market_cap_tier": "LARGE",
+    "volume_ratio_pct": 15.930052689427196
+  },
+  {
+    "scope": "STOCK",
+    "trigger_type": "VOLUME_RATIO",
+    "stock_id": "2308",
+    "estimated_amount": -3566866950,
+    "market_cap_tier": "LARGE",
+    "volume_ratio_pct": 25.273651045506636
+  },
+  {
+    "scope": "STOCK",
+    "trigger_type": "VOLUME_RATIO",
+    "stock_id": "2882",
+    "estimated_amount": 858713084,
+    "market_cap_tier": null,
+    "volume_ratio_pct": 23.817715863140794
+  },
+  {
+    "scope": "STOCK",
+    "trigger_type": "VOLUME_RATIO",
+    "stock_id": "2634",
+    "estimated_amount": 190237264,
+    "market_cap_tier": "MID",
+    "volume_ratio_pct": 57.08491454691651
+  },
+  {
+    "scope": "STOCK",
+    "trigger_type": "VOLUME_RATIO",
+    "stock_id": "8222",
+    "estimated_amount": 2331600,
+    "market_cap_tier": "SMALL",
+    "volume_ratio_pct": 24.1570278923534
+  },
+  {
+    "scope": "STOCK",
+    "trigger_type": "VOLUME_RATIO",
+    "stock_id": "2313",
+    "estimated_amount": 4181246024,
+    "market_cap_tier": "LARGE",
+    "volume_ratio_pct": 33.48665885437356
+  },
+  {
+    "scope": "STOCK",
+    "trigger_type": "VOLUME_RATIO",
+    "stock_id": "6285",
+    "estimated_amount": 1120994025,
+    "market_cap_tier": "LARGE",
+    "volume_ratio_pct": 32.78144712618582
+  },
+  {
+    "scope": "STOCK",
+    "trigger_type": "VOLUME_AND_AMOUNT",
+    "stock_id": "2317",
+    "estimated_amount": 5651020724,
+    "market_cap_tier": "LARGE",
+    "volume_ratio_pct": 46.186757629097215
+  },
+  {
+    "scope": "STOCK",
+    "trigger_type": "VOLUME_RATIO",
+    "stock_id": "2382",
+    "estimated_amount": 1243261320,
+    "market_cap_tier": "LARGE",
+    "volume_ratio_pct": 39.652114330642966
+  },
+  {
+    "scope": "STOCK",
+    "trigger_type": "VOLUME_RATIO",
+    "stock_id": "2357",
+    "estimated_amount": 884451260,
+    "market_cap_tier": "LARGE",
+    "volume_ratio_pct": 36.475234439436
+  },
+  {
+    "scope": "STOCK",
+    "trigger_type": "VOLUME_RATIO",
+    "stock_id": "2324",
+    "estimated_amount": 289730352,
+    "market_cap_tier": "LARGE",
+    "volume_ratio_pct": 33.76266122248516
+  },
+  {
+    "scope": "STOCK",
+    "trigger_type": "VOLUME_RATIO",
+    "stock_id": "2356",
+    "estimated_amount": 233901252,
+    "market_cap_tier": "LARGE",
+    "volume_ratio_pct": 25.984899317091724
+  },
+  {
+    "scope": "STOCK",
+    "trigger_type": "VOLUME_RATIO",
+    "stock_id": "2049",
+    "estimated_amount": -136988347,
+    "market_cap_tier": "LARGE",
+    "volume_ratio_pct": 30.12488287955573
+  },
+  {
+    "scope": "STOCK",
+    "trigger_type": "VOLUME_RATIO",
+    "stock_id": "6188",
+    "estimated_amount": 12666660,
+    "market_cap_tier": "MID",
+    "volume_ratio_pct": 33.990066820406675
+  }
+]
