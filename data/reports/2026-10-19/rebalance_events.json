@@ -1,0 +1,162 @@
+[
+  {
+    "event_date": "2026-10-19",
+    "etf_id": "00981A",
+    "component_stock_id": "3443",
+    "component_name": "創意",
+    "event_type": "REBALANCE",
+    "prev_shares": 751000,
+    "curr_shares": 852000,
+    "change_pct": 13.448735019973368
+  },
+  {
+    "event_date": "2026-10-19",
+    "etf_id": "00981A",
+    "component_stock_id": "6805",
+    "component_name": "富世達",
+    "event_type": "REBALANCE",
+    "prev_shares": 649000,
+    "curr_shares": 769000,
+    "change_pct": 18.489984591679505
+  },
+  {
+    "event_date": "2026-10-19",
+    "etf_id": "00981A",
+    "component_stock_id": "8358",
+    "component_name": "金居",
+    "event_type": "REBALANCE",
+    "prev_shares": 1000,
+    "curr_shares": 654000,
+    "change_pct": 65300.0
+  },
+  {
+    "event_date": "2026-10-19",
+    "etf_id": "00981A",
+    "component_stock_id": "3264",
+    "component_name": "欣銓",
+    "event_type": "REBALANCE",
+    "prev_shares": 1857000,
+    "curr_shares": 2657000,
+    "change_pct": 43.08023694130318
+  },
+  {
+    "event_date": "2026-10-19",
+    "etf_id": "00981A",
+    "component_stock_id": "2449",
+    "component_name": "京元電子",
+    "event_type": "REBALANCE",
+    "prev_shares": 4143450,
+    "curr_shares": 5151450,
+    "change_pct": 24.327553126018174
+  },
+  {
+    "event_date": "2026-10-19",
+    "etf_id": "00985A",
+    "component_stock_id": "2308",
+    "component_name": "台達電子工業",
+    "event_type": "REBALANCE",
+    "prev_shares": 340000,
+    "curr_shares": 462000,
+    "change_pct": 35.88235294117647
+  },
+  {
+    "event_date": "2026-10-19",
+    "etf_id": "00985A",
+    "component_stock_id": "6669",
+    "component_name": "緯穎科技服務",
+    "event_type": "REBALANCE",
+    "prev_shares": 227036,
+    "curr_shares": 392036,
+    "change_pct": 72.67569900808682
+  },
+  {
+    "event_date": "2026-10-19",
+    "etf_id": "00985A",
+    "component_stock_id": "4904",
+    "component_name": "遠傳電信",
+    "event_type": "REBALANCE",
+    "prev_shares": 9139000,
+    "curr_shares": 7183000,
+    "change_pct": -21.40277929751614
+  },
+  {
+    "event_date": "2026-10-19",
+    "etf_id": "00985A",
+    "component_stock_id": "2327",
+    "component_name": "國巨",
+    "event_type": "REBALANCE",
+    "prev_shares": 770000,
+    "curr_shares": 999000,
+    "change_pct": 29.740259740259738
+  },
+  {
+    "event_date": "2026-10-19",
+    "etf_id": "00985A",
+    "component_stock_id": "1216",
+    "component_name": "統一企業",
+    "event_type": "REBALANCE",
+    "prev_shares": 14442000,
+    "curr_shares": 11728000,
+    "change_pct": -18.79241102340396
+  },
+  {
+    "event_date": "2026-10-19",
+    "etf_id": "00985A",
+    "component_stock_id": "3189",
+    "component_name": "景碩科技",
+    "event_type": "REBALANCE",
+    "prev_shares": 1000,
+    "curr_shares": 149000,
+    "change_pct": 14800.0
+  },
+  {
+    "event_date": "2026-10-19",
+    "etf_id": "00985A",
+    "component_stock_id": "2344",
+    "component_name": "華邦電子",
+    "event_type": "REBALANCE",
+    "prev_shares": 156000,
+    "curr_shares": 2294000,
+    "change_pct": 1370.5128205128203
+  },
+  {
+    "event_date": "2026-10-19",
+    "etf_id": "00403A",
+    "component_stock_id": "2454",
+    "component_name": "聯發科",
+    "event_type": "REBALANCE",
+    "prev_shares": 1700000,
+    "curr_shares": 1500000,
+    "change_pct": -11.76470588235294
+  },
+  {
+    "event_date": "2026-10-19",
+    "etf_id": "00403A",
+    "component_stock_id": "6805",
+    "component_name": "富世達",
+    "event_type": "REBALANCE",
+    "prev_shares": 250000,
+    "curr_shares": 310000,
+    "change_pct": 24.0
+  },
+  {
+    "event_date": "2026-10-19",
+    "etf_id": "00403A",
+    "component_stock_id": "1560",
+    "component_name": "中砂",
+    "event_type": "REBALANCE",
+    "prev_shares": 191000,
+    "curr_shares": 300000,
+    "change_pct": 57.06806282722513
+  },
+  {
+    "event_date": "2026-10-19",
+    "etf_id": "00403A",
+    "component_stock_id": "2368",
+    "component_name": "金像電",
+    "event_type": "REBALANCE",
+    "prev_shares": 700000,
+    "curr_shares": 820000,
+    "change_pct": 17.142857142857142
+  }
+]
