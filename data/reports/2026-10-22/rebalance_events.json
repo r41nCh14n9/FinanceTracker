@@ -1,0 +1,92 @@
+[
+  {
+    "event_date": "2026-10-22",
+    "etf_id": "00981A",
+    "component_stock_id": "4966",
+    "component_name": "譜瑞-KY",
+    "event_type": "DELETION",
+    "prev_shares": 1000,
+    "curr_shares": 0,
+    "change_pct": null
+  },
+  {
+    "event_date": "2026-10-22",
+    "etf_id": "00985A",
+    "component_stock_id": "2412",
+    "component_name": "中華電信",
+    "event_type": "REBALANCE",
+    "prev_shares": 2818000,
+    "curr_shares": 4107000,
+    "change_pct": 45.7416607523066
+  },
+  {
+    "event_date": "2026-10-22",
+    "etf_id": "00985A",
+    "component_stock_id": "1402",
+    "component_name": "遠東新世紀",
+    "event_type": "REBALANCE",
+    "prev_shares": 15953000,
+    "curr_shares": 17903000,
+    "change_pct": 12.223406255876638
+  },
+  {
+    "event_date": "2026-10-22",
+    "etf_id": "00985A",
+    "component_stock_id": "3017",
+    "component_name": "奇鋐科技",
+    "event_type": "REBALANCE",
+    "prev_shares": 145000,
+    "curr_shares": 109000,
+    "change_pct": -24.82758620689655
+  },
+  {
+    "event_date": "2026-10-22",
+    "etf_id": "00985A",
+    "component_stock_id": "2408",
+    "component_name": "南亞科技",
+    "event_type": "REBALANCE",
+    "prev_shares": 1092000,
+    "curr_shares": 833000,
+    "change_pct": -23.717948717948715
+  },
+  {
+    "event_date": "2026-10-22",
+    "etf_id": "00985A",
+    "component_stock_id": "3036",
+    "component_name": "文曄科技",
+    "event_type": "REBALANCE",
+    "prev_shares": 3650000,
+    "curr_shares": 4137000,
+    "change_pct": 13.342465753424657
+  },
+  {
+    "event_date": "2026-10-22",
+    "etf_id": "00985A",
+    "component_stock_id": "1101",
+    "component_name": "臺灣水泥",
+    "event_type": "REBALANCE",
+    "prev_shares": 14486000,
+    "curr_shares": 18842000,
+    "change_pct": 30.070412812370567
+  },
+  {
+    "event_date": "2026-10-22",
+    "etf_id": "00985A",
+    "component_stock_id": "2610",
+    "component_name": "中華航空",
+    "event_type": "REBALANCE",
+    "prev_shares": 23341000,
+    "curr_shares": 25735000,
+    "change_pct": 10.256629964440256
+  },
+  {
+    "event_date": "2026-10-22",
+    "etf_id": "00403A",
+    "component_stock_id": "3653",
+    "component_name": "健策",
+    "event_type": "REBALANCE",
+    "prev_shares": 1115000,
+    "curr_shares": 1000000,
+    "change_pct": -10.31390134529148
+  }
+]
