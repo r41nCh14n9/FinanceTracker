@@ -1,0 +1,82 @@
+[
+  {
+    "event_date": "2026-11-03",
+    "etf_id": "00981A",
+    "component_stock_id": "1802",
+    "component_name": "台玻",
+    "event_type": "ADDITION",
+    "prev_shares": 0,
+    "curr_shares": 8479000,
+    "change_pct": null
+  },
+  {
+    "event_date": "2026-11-03",
+    "etf_id": "00981A",
+    "component_stock_id": "8210",
+    "component_name": "勤誠",
+    "event_type": "REBALANCE",
+    "prev_shares": 241000,
+    "curr_shares": 141000,
+    "change_pct": -41.49377593360996
+  },
+  {
+    "event_date": "2026-11-03",
+    "etf_id": "00981A",
+    "component_stock_id": "3376",
+    "component_name": "新日興",
+    "event_type": "REBALANCE",
+    "prev_shares": 1345000,
+    "curr_shares": 1045000,
+    "change_pct": -22.304832713754646
+  },
+  {
+    "event_date": "2026-11-03",
+    "etf_id": "00991A",
+    "component_stock_id": "3711",
+    "component_name": "日月光投",
+    "event_type": "REBALANCE",
+    "prev_shares": 3100000,
+    "curr_shares": 3600000,
+    "change_pct": 16.129032258064516
+  },
+  {
+    "event_date": "2026-11-03",
+    "etf_id": "00991A",
+    "component_stock_id": "3081",
+    "component_name": "聯亞光電",
+    "event_type": "REBALANCE",
+    "prev_shares": 800000,
+    "curr_shares": 600000,
+    "change_pct": -25.0
+  },
+  {
+    "event_date": "2026-11-03",
+    "etf_id": "00403A",
+    "component_stock_id": "2345",
+    "component_name": "智邦",
+    "event_type": "REBALANCE",
+    "prev_shares": 1466000,
+    "curr_shares": 1260000,
+    "change_pct": -14.051841746248295
+  },
+  {
+    "event_date": "2026-11-03",
+    "etf_id": "00403A",
+    "component_stock_id": "6442",
+    "component_name": "光聖",
+    "event_type": "REBALANCE",
+    "prev_shares": 320000,
+    "curr_shares": 255000,
+    "change_pct": -20.3125
+  },
+  {
+    "event_date": "2026-11-03",
+    "etf_id": "00403A",
+    "component_stock_id": "2059",
+    "component_name": "川湖",
+    "event_type": "REBALANCE",
+    "prev_shares": 90000,
+    "curr_shares": 100000,
+    "change_pct": 11.11111111111111
+  }
+]
