@@ -1,0 +1,132 @@
+[
+  {
+    "event_date": "2026-11-05",
+    "etf_id": "00981A",
+    "component_stock_id": "8210",
+    "component_name": "勤誠",
+    "event_type": "DELETION",
+    "prev_shares": 141000,
+    "curr_shares": 0,
+    "change_pct": null
+  },
+  {
+    "event_date": "2026-11-05",
+    "etf_id": "00981A",
+    "component_stock_id": "2891",
+    "component_name": "中信金",
+    "event_type": "ADDITION",
+    "prev_shares": 0,
+    "curr_shares": 5455000,
+    "change_pct": null
+  },
+  {
+    "event_date": "2026-11-05",
+    "etf_id": "00981A",
+    "component_stock_id": "6488",
+    "component_name": "環球晶",
+    "event_type": "DELETION",
+    "prev_shares": 1000,
+    "curr_shares": 0,
+    "change_pct": null
+  },
+  {
+    "event_date": "2026-11-05",
+    "etf_id": "00991A",
+    "component_stock_id": "3711",
+    "component_name": "日月光投",
+    "event_type": "REBALANCE",
+    "prev_shares": 3600000,
+    "curr_shares": 4000000,
+    "change_pct": 11.11111111111111
+  },
+  {
+    "event_date": "2026-11-05",
+    "etf_id": "00991A",
+    "component_stock_id": "3081",
+    "component_name": "聯亞光電",
+    "event_type": "REBALANCE",
+    "prev_shares": 600000,
+    "curr_shares": 1000,
+    "change_pct": -99.83333333333333
+  },
+  {
+    "event_date": "2026-11-05",
+    "etf_id": "00991A",
+    "component_stock_id": "2317",
+    "component_name": "鴻海精密",
+    "event_type": "REBALANCE",
+    "prev_shares": 9000,
+    "curr_shares": 1250000,
+    "change_pct": 13788.888888888889
+  },
+  {
+    "event_date": "2026-11-05",
+    "etf_id": "00991A",
+    "component_stock_id": "4958",
+    "component_name": "臻鼎-KY",
+    "event_type": "ADDITION",
+    "prev_shares": 0,
+    "curr_shares": 690000,
+    "change_pct": null
+  },
+  {
+    "event_date": "2026-11-05",
+    "etf_id": "00991A",
+    "component_stock_id": "3231",
+    "component_name": "緯創資通",
+    "event_type": "REBALANCE",
+    "prev_shares": 9000,
+    "curr_shares": 1700000,
+    "change_pct": 18788.888888888887
+  },
+  {
+    "event_date": "2026-11-05",
+    "etf_id": "00991A",
+    "component_stock_id": "6505",
+    "component_name": "台塑石化",
+    "event_type": "REBALANCE",
+    "prev_shares": 13000000,
+    "curr_shares": 8769000,
+    "change_pct": -32.54615384615385
+  },
+  {
+    "event_date": "2026-11-05",
+    "etf_id": "00991A",
+    "component_stock_id": "2313",
+    "component_name": "華通電腦",
+    "event_type": "DELETION",
+    "prev_shares": 1253,
+    "curr_shares": 0,
+    "change_pct": null
+  },
+  {
+    "event_date": "2026-11-05",
+    "etf_id": "00992A",
+    "component_stock_id": "6584",
+    "component_name": "南俊國際",
+    "event_type": "REBALANCE",
+    "prev_shares": 1884000,
+    "curr_shares": 1580000,
+    "change_pct": -16.13588110403397
+  },
+  {
+    "event_date": "2026-11-05",
+    "etf_id": "00992A",
+    "component_stock_id": "3665",
+    "component_name": "貿聯-KY",
+    "event_type": "REBALANCE",
+    "prev_shares": 1341000,
+    "curr_shares": 1581000,
+    "change_pct": 17.89709172259508
+  },
+  {
+    "event_date": "2026-11-05",
+    "etf_id": "00403A",
+    "component_stock_id": "2882",
+    "component_name": "國泰金",
+    "event_type": "REBALANCE",
+    "prev_shares": 4000000,
+    "curr_shares": 5000000,
+    "change_pct": 25.0
+  }
+]
