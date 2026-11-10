@@ -1,0 +1,284 @@
+[
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "2330",
+    "trading_volume": 36575797,
+    "close_price": 2285.0
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "3711",
+    "trading_volume": 33676365,
+    "close_price": 605.0
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "3680",
+    "trading_volume": 1095588,
+    "close_price": 421.0
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "6488",
+    "trading_volume": 23791080,
+    "close_price": 612.0
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "5483",
+    "trading_volume": 9590269,
+    "close_price": 160.5
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "3532",
+    "trading_volume": 1197608,
+    "close_price": 302.0
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "2454",
+    "trading_volume": 19554575,
+    "close_price": 3830.0
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "3661",
+    "trading_volume": 4645742,
+    "close_price": 3420.0
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "3529",
+    "trading_volume": 767853,
+    "close_price": 2215.0
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "3008",
+    "trading_volume": 4053928,
+    "close_price": 5065.0
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "3406",
+    "trading_volume": 6064299,
+    "close_price": 905.0
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "3019",
+    "trading_volume": 10839789,
+    "close_price": 130.5
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "2345",
+    "trading_volume": 6572382,
+    "close_price": 1545.0
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "3081",
+    "trading_volume": 880859,
+    "close_price": 2115.0
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "3363",
+    "trading_volume": 2877006,
+    "close_price": 411.0
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "2308",
+    "trading_volume": 16389594,
+    "close_price": 1275.0
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "2301",
+    "trading_volume": 25850411,
+    "close_price": 233.5
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "6409",
+    "trading_volume": 515107,
+    "close_price": 787.0
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "2327",
+    "trading_volume": 60474142,
+    "close_price": 416.5
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "2492",
+    "trading_volume": 38076272,
+    "close_price": 288.5
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "3026",
+    "trading_volume": 12107955,
+    "close_price": 510.0
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "2881",
+    "trading_volume": 19383632,
+    "close_price": 153.0
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "2882",
+    "trading_volume": 22164347,
+    "close_price": 110.0
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "2891",
+    "trading_volume": 37205627,
+    "close_price": 73.7
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "3037",
+    "trading_volume": 27967864,
+    "close_price": 828.0
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "8046",
+    "trading_volume": 12327620,
+    "close_price": 1005.0
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "3189",
+    "trading_volume": 8517090,
+    "close_price": 745.0
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "2634",
+    "trading_volume": 5033853,
+    "close_price": 54.6
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "2645",
+    "trading_volume": 1398476,
+    "close_price": 163.5
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "8222",
+    "trading_volume": 355340,
+    "close_price": 31.8
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "2313",
+    "trading_volume": 26829324,
+    "close_price": 182.5
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "6285",
+    "trading_volume": 10372460,
+    "close_price": 191.5
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "3491",
+    "trading_volume": 890756,
+    "close_price": 1305.0
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "2317",
+    "trading_volume": 45344218,
+    "close_price": 241.5
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "2382",
+    "trading_volume": 14162113,
+    "close_price": 298.5
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "6669",
+    "trading_volume": 3476178,
+    "close_price": 1680.0
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "2357",
+    "trading_volume": 3028339,
+    "close_price": 884.0
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "2324",
+    "trading_volume": 27081623,
+    "close_price": 32.6
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "2356",
+    "trading_volume": 14080514,
+    "close_price": 54.9
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "2049",
+    "trading_volume": 3950692,
+    "close_price": 291.5
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "2359",
+    "trading_volume": 1587664,
+    "close_price": 99.2
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "2464",
+    "trading_volume": 6879640,
+    "close_price": 156.0
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "6188",
+    "trading_volume": 917198,
+    "close_price": 50.7
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "3017",
+    "trading_volume": 3563593,
+    "close_price": 2790.0
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "3324",
+    "trading_volume": 6637379,
+    "close_price": 1235.0
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "3376",
+    "trading_volume": 2587350,
+    "close_price": 119.5
+  },
+  {
+    "trade_date": "2026-11-10",
+    "stock_id": "8996",
+    "trading_volume": 3537685,
+    "close_price": 1405.0
+  }
+]
