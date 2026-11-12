@@ -540,9 +540,25 @@
       {
         "stock_id": "2892",
         "stock_name": "第一金"
+      },
+      {
+        "stock_id": "2884",
+        "stock_name": "玉山金"
+      },
+      {
+        "stock_id": "2885",
+        "stock_name": "元大金"
+      },
+      {
+        "stock_id": "2886",
+        "stock_name": "兆豐金"
+      },
+      {
+        "stock_id": "2887",
+        "stock_name": "台新新光金"
       }
     ],
-    "updated_at": "2026-11-09T21:53:44.249567+00:00"
+    "updated_at": "2026-11-12T19:29:05.482238+00:00"
   },
   "化學生技醫療": {
     "members": [
