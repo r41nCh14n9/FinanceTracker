@@ -81,7 +81,14 @@ Get-LocalGroupMember -Group "Users"            # 應出現 ftops
    - General：勾選 **Start Docker Desktop when you sign in to your computer**
    - General：取消勾選自動更新相關選項（Software updates → 關閉自動下載；手動於非交易日更新）
    - Kubernetes：**Enable Kubernetes**，Cluster type 選 **kubeadm**（單節點，image 與 Docker 共用，不需另行 push）
-   - Apply & Restart，等待 K8s 圖示變綠（首次約 5～10 分鐘）。
+   - Apply & Restart（**不是**重開遠端主機，也不用手動關閉 Docker Desktop；僅啟用 Kubernetes 時，Docker Desktop 通常不會重啟引擎，只會顯示「安裝／啟動 Kubernetes」，屬正常現象），等待 K8s 圖示變綠（首次約 5～10 分鐘）。
+   - 首次啟動若出現 Docker 登入畫面，按右上角 **Skip** 即可；本專案不需要 Docker 帳號。
+
+   > 為什麼選 kubeadm 而不是 kind？
+   > - kubeadm 的節點直接跑在 Docker Desktop 的 WSL 虛擬機內，**與 Docker 引擎共用映像檔**，`docker load` 後 Pod 即可使用；kind 的節點是獨立容器，每次部署還要多一步 `kind load docker-image`。
+   > - PostgreSQL 的 PVC 資料隨 WSL 虛擬磁碟保留，機器每日關機重啟後仍在；kind 的資料綁在節點容器內，叢集一旦重建就消失。
+   > - 重啟後由 Docker Desktop 自行恢復，不需額外的節點容器恢復腳本。
+   > - 本專案為單機單節點、無高可用需求，kind 的多節點與快速重建優勢用不上。
 6. 驗證（以 `ftops` 的 PowerShell）：
 
    ```powershell
@@ -134,15 +141,37 @@ powercfg /change monitor-timeout-ac 10
 
 ### 4.4 關機前處理（02:50）
 
-建立 `C:\ftops\pre-shutdown.ps1`（僅 `ftops` 可讀寫）：
+**先建立 `C:\ftops\` 資料夾並鎖定權限**（以 `roy` 管理員 PowerShell 執行一次；此資料夾也用於 §6 的 `kubeconfig-deployer.yaml`）：
 
 ```powershell
+New-Item -ItemType Directory C:\ftops
+icacls C:\ftops /inheritance:r /grant:r "A233\ftops:(OI)(CI)F" "BUILTIN\Administrators:(OI)(CI)F" "NT AUTHORITY\SYSTEM:(OI)(CI)F"
+icacls C:\ftops          # 確認只剩 ftops、Administrators、SYSTEM
+```
+
+> **為什麼放在 `C:\ftops\` 而不是 `C:\Users\ftops\`？** 路徑固定且簡短，排程工作與 §6 的憑證檔共用同一位置，也避開使用者設定檔路徑造成的混淆；放在 `C:\Users\ftops\` 同樣可行（設定檔預設就是私有），但需同步修改下方與 §6 的路徑。
+>
+> **為什麼要「僅 `ftops` 可讀寫」？**
+> - **禁止寫入（防提權）**：`pre-shutdown.ps1` 會以 `ftops` 身分、`ExecutionPolicy Bypass` 每天自動執行。若其他帳號能修改它，就能在腳本裡塞入任意指令，藉排程以 `ftops` 的權限執行（而 `ftops` 可操作 Docker 與 K8s），等於繞過權限分隔並留下持久後門。
+> - **禁止讀取（保護憑證）**：同資料夾的 `kubeconfig-deployer.yaml` 含 pipeline 的存取 token，被讀走就能冒用 deployer 身分操作 `financetracker` namespace。
+> - 這是最小權限原則：只有該排程的執行者與管理員能碰這些檔案。但 Azure DevOps agent 也以 `ftops` 執行，等於 pipeline 能改這些檔案，所以「誰能編輯 pipeline」仍須嚴格限制（見 §7.4）。
+
+建立 `C:\ftops\pre-shutdown.ps1`（以 `ftops` 或 `roy` 的 PowerShell 執行一次；單引號 here-string 會原樣保留內容，不會展開 `$` 與反引號）：
+
+```powershell
+@'
 # 1. 要求 PostgreSQL 做 checkpoint，降低異常斷電風險
 kubectl --context docker-desktop -n financetracker exec statefulset/postgres -- `
   psql -U postgres -c "CHECKPOINT;"
 # 2. 正常關閉 Docker Desktop（Docker Desktop 4.37+ 提供此指令；若無，改用 Stop-Process 前先等待）
 docker desktop stop
+'@ | Set-Content -Encoding utf8 C:\ftops\pre-shutdown.ps1
+
+Get-Content C:\ftops\pre-shutdown.ps1     # 確認內容
+icacls C:\ftops\pre-shutdown.ps1          # 確認權限只有 ftops、Administrators、SYSTEM
 ```
+
+> 注意：結尾的 `'@` 必須**頂格**（前面不可有空白），否則 PowerShell 會語法錯誤。`financetracker` namespace 與 `postgres` StatefulSet 要等 SD 階段部署後才存在，此腳本在部署前執行會報錯，屬預期。
 
 以 `ftops` 註冊每日 02:50 工作（需「使用者登入時才執行」，因為 `ftops` 已自動登入）：
 
@@ -156,13 +185,28 @@ Register-ScheduledTask -TaskName "FT-PreShutdown" -Action $act -Trigger $trg -Us
 
 ### 4.5 重啟驗證（Phase 0 必做，連續 5 次）
 
-重開機後**不要登入、不要操作**，10 分鐘後從手機或另一台電腦確認：
+> 本節分兩個階段。§4 在 §6（K8s 帳號）、§7（Azure DevOps agent）之前，做到這裡時應用程式**尚未部署**，`financetracker` namespace 與 Pod 都還不存在，此時執行 `kubectl get pods -n financetracker` 只會得到 `No resources found`（不代表失敗）。請先做 **階段 A**，連續 5 次的完整驗證留到**階段 B**。
+
+**階段 A：尚未部署應用程式時（驗證開機 → 自動登入 → Docker Desktop → K8s 這條鏈路）**
+
+重開機後**不要登入、不要操作**，10 分鐘後從手機或另一台電腦（以 `ftops` 的一般 PowerShell，勿以系統管理員身分執行）確認：
+
+```powershell
+kubectl get nodes        # STATUS 應為 Ready
+kubectl get pods -A      # kube-system 底下的系統 Pod 應全部 Running
+```
+
+通過條件：主機重啟後自動登入 `ftops`（§4.1）、約 1 分鐘後鎖屏（§4.2）、節點 `Ready`、系統 Pod `Running`。
+
+**階段 B：完成 §6、§7，並以 pipeline 部署 PostgreSQL 與應用程式（至少 §9 的 Hello World）之後，連續 5 次**
+
+重開機後同樣不要登入、不要操作，10 分鐘後確認：
 
 ```powershell
 kubectl get pods -n financetracker      # 全部 Running/Ready
 ```
 
-並確認 PostgreSQL 內前一天的資料仍在、worker 在作業時段內有補跑。
+並確認 PostgreSQL 內前一天的資料仍在、worker 在作業時段內有補跑。連續 5 次皆通過，才勾選 §9 的驗收項目。
 
 ---
 
@@ -183,9 +227,10 @@ kubectl get pods -n financetracker      # 全部 Running/Ready
 kubectl create namespace financetracker
 ```
 
-`deployer-rbac.yaml`：
+建立 `C:\ftops\deployer-rbac.yaml`（以 `ftops` 的一般 PowerShell 執行；資料夾與權限已於 §4.4 建立。以「無 BOM 的 UTF-8」寫入，避免 `kubectl` 讀到 BOM 出錯；結尾 `'@` 必須頂格）：
 
-```yaml
+```powershell
+$rbac = @'
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -231,10 +276,12 @@ metadata:
   annotations:
     kubernetes.io/service-account.name: deployer
 type: kubernetes.io/service-account-token
+'@
+[IO.File]::WriteAllText("C:\ftops\deployer-rbac.yaml", $rbac, (New-Object Text.UTF8Encoding $false))
 ```
 
 ```powershell
-kubectl apply -f deployer-rbac.yaml
+kubectl apply -f C:\ftops\deployer-rbac.yaml
 # 驗證權限邊界
 kubectl auth can-i create deployments -n financetracker --as=system:serviceaccount:financetracker:deployer   # yes
 kubectl auth can-i delete persistentvolumeclaims -n financetracker --as=system:serviceaccount:financetracker:deployer  # no
@@ -249,7 +296,7 @@ $token = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($token))
 $ca    = kubectl -n financetracker get secret deployer-token -o jsonpath="{.data['ca\.crt']}"
 $server = kubectl config view --minify -o jsonpath="{.clusters[0].cluster.server}"
 
-@"
+$kubeconfig = @"
 apiVersion: v1
 kind: Config
 clusters:
@@ -262,7 +309,8 @@ contexts:
 - name: ft-deployer
   context: { cluster: docker-desktop, user: deployer, namespace: financetracker }
 current-context: ft-deployer
-"@ | Set-Content -Encoding utf8 C:\ftops\kubeconfig-deployer.yaml
+"@
+[IO.File]::WriteAllText("C:\ftops\kubeconfig-deployer.yaml", $kubeconfig, (New-Object Text.UTF8Encoding $false))
 icacls C:\ftops\kubeconfig-deployer.yaml /inheritance:r /grant:r "A233\ftops:(R)"
 ```
 
@@ -312,9 +360,45 @@ sc.exe config "<上一行的服務名稱>" start= delayed-auto
 
 ### 7.3 驗證
 
-- Azure DevOps → Agent pools → `local-k8s-pool` → Agents：`A233-agent` 為 **Online**。
-- 建立只有 `docker version`、`kubectl get pods -n financetracker` 兩步驟的測試 pipeline（使用 §6 的 kubeconfig），確認可在 `ftops` 權限下成功執行。
+本節是驗證「agent 是否裝好」，**不是開始正式開發**；但要跑任何 pipeline 都必須先有 Azure DevOps **專案**與放 YAML 的儲存庫，所以在這裡建立一個最小的專案與測試 pipeline。
+
+**前置**：§7.1 的 Agent pool 已建立；§7.2 已完成，且 agent 在 Agent pools → `local-k8s-pool` → Agents 顯示 **Online**（`A233-agent`）。
+
+**步驟**
+
+1. **建立專案**：`https://dev.azure.com/<你的組織名稱>` → New project → 名稱例如 `FinanceTracker`，可見性選 **Private**。
+2. **準備儲存庫**（二擇一）：使用專案內建的 Azure Repos（Repos 初始化一個儲存庫），或連到既有的 GitHub `FinanceTracker`（建立 pipeline 時選 GitHub 並授權）。
+3. **加入測試用 YAML**（建議放在**獨立分支**，驗證完即可刪除，避免干擾日後正式 pipeline 結構），例如 `azure-pipelines-agent-test.yml`：
+
+   ```yaml
+   trigger: none            # 不自動觸發，只手動執行
+
+   pool:
+     name: local-k8s-pool
+
+   steps:
+     - script: docker version
+       displayName: Docker 可用
+     - script: kubectl --kubeconfig C:\ftops\kubeconfig-deployer.yaml get pods -n financetracker
+       displayName: 以 deployer 身分查詢 Pod
+   ```
+
+4. **建立 pipeline**：Pipelines → New pipeline → 選儲存庫 → Existing Azure Pipelines YAML file → 選上述檔案 → Save。
+5. **授權 pool**：第一次執行時會要求 **Permit** 使用 `local-k8s-pool`，按核准。這是 §7.1 刻意不勾選「Grant access permission to all pipelines」的預期結果。
+6. **Run**，檢視兩個步驟。
+
+**通過條件**
+
+- Agent 為 **Online**。
+- `docker version` 同時顯示 Client 與 Server 資訊（代表 `ftops` 的 Docker Desktop 引擎有回應）。
+- `get pods` 回傳 `No resources found in financetracker namespace.`（尚未部署應用程式，屬正常；代表 deployer kubeconfig 可用）。
 - 重開機後 agent 自動回到 Online。
+
+**註冊 agent 的注意事項**
+
+- 建議以互動式 `.\config.cmd` 註冊（不加 `--unattended`、`--token`、`--windowsLogonPassword`），讓 PAT 與密碼以隱藏方式輸入，避免寫進 PowerShell 指令歷史；註冊完成後撤銷 PAT。
+- 若 `C:\azagent` 內找不到 `config.cmd`，代表尚未下載並解壓縮 agent 安裝檔（§7.2 第二行註解）。
+- 若機器上已有舊 agent，須先在舊資料夾以 `.\config.cmd remove` 正式移除並取消註冊，再刪資料夾；不要直接改名或刪除資料夾。
 
 > 若服務帳號 `ftops` 在 Docker Desktop 尚未啟動前就接到工作，`docker` 指令會失敗。pipeline 的 CD 階段第一步請加入「等待 Docker／K8s 就緒」的重試迴圈（最多 10 分鐘），再進行 `docker load`。
 
